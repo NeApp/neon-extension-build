@@ -1,0 +1,119 @@
+import Chalk from 'chalk';
+import Filesystem from 'fs-extra';
+import ForEach from 'lodash/forEach';
+import IsNil from 'lodash/isNil';
+import Mkdirp from 'mkdirp';
+import PadEnd from 'lodash/padEnd';
+import Path from 'path';
+import Reduce from 'lodash/reduce';
+import Util from 'util';
+import Webpack from 'webpack';
+
+import Clean from '../clean';
+import {Task} from '../../core/helpers';
+import {createConfiguration} from '../../webpack';
+
+
+export const Extension = Task.create({
+    name: 'build:extension',
+    description: 'Build extension modules.',
+
+    required: [
+        Clean
+    ]
+}, function(log, browser, environment) {
+    const buildPath = Path.join(environment.options['build-dir'], browser.name, environment.name);
+
+    // Construct compiler
+    let compiler;
+
+    try {
+        compiler = constructCompiler(browser, environment, buildPath);
+    } catch(e) {
+        return Promise.reject(e);
+    }
+
+    // Run compiler
+    return runCompiler(compiler)
+        .then((stats) => {
+            // Log statistics
+            log.info(stats.toString('normal'));
+
+            // Write statistics to file
+            writeStats(buildPath, stats);
+
+            // Exit if there is any errors
+            if(stats.hasErrors()) {
+                return Promise.reject(new Error('Build failed'));
+            }
+        })
+        // Display extracted modules
+        .then(() => {
+            let extracted = environment.webpack.extracted;
+
+            if(Object.keys(extracted).length < 1) {
+                return Promise.reject(new Error('No modules were extracted'));
+            }
+
+            let nameLength = Reduce(Object.keys(extracted), (result, name) => {
+                if(name.length > result) {
+                    return name.length;
+                }
+
+                return result;
+            }, 0);
+
+            ForEach(Object.keys(extracted).sort(), (name) => {
+                log.debug(Chalk.green(
+                    PadEnd(name, nameLength) + ' => ' + extracted[name]
+                ));
+            });
+        });
+});
+
+function constructCompiler(browser, environment, buildPath) {
+    let outputPath = Path.join(buildPath, 'unpacked');
+
+    // Generate configuration
+    let configuration;
+
+    try {
+        configuration = createConfiguration(browser, environment, outputPath);
+    } catch(e) {
+        throw new Error('Unable to generate configuration: ' + e.stack);
+    }
+
+    // Ensure output directory exists
+    Mkdirp.sync(outputPath);
+
+    // Save configuration
+    Filesystem.writeFileSync(
+        Path.join(buildPath, 'webpack.config.js'),
+        Util.inspect(configuration, { depth: null }),
+        'utf-8'
+    );
+
+    // Construct compiler
+    return Webpack(configuration);
+}
+
+function runCompiler(compiler) {
+    return new Promise((resolve, reject) => {
+        compiler.run((err, stats) => {
+            if(!IsNil(err)) {
+                reject(err);
+            } else {
+                resolve(stats);
+            }
+        });
+    });
+}
+
+function writeStats(buildDir, stats) {
+    return Filesystem.writeJson(
+        Path.join(buildDir, 'webpack.stats.json'),
+        stats.toJson('verbose')
+    );
+}
+
+export default Extension;
