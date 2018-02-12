@@ -21,6 +21,7 @@ function resolveEnvironment(environment, browser, options) {
         outputPath: Path.join(buildPath, 'unpacked'),
         buildPath,
 
+        builderPath: Path.resolve(__dirname, '../../'),
         packagePath: options['package-dir'],
 
         options,
