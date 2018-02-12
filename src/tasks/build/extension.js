@@ -72,19 +72,17 @@ export const Extension = Task.create({
 });
 
 function constructCompiler(browser, environment, buildPath) {
-    let outputPath = Path.join(buildPath, 'unpacked');
-
     // Generate configuration
     let configuration;
 
     try {
-        configuration = createConfiguration(browser, environment, outputPath);
+        configuration = createConfiguration(browser, environment);
     } catch(e) {
         throw new Error('Unable to generate configuration: ' + e.stack);
     }
 
     // Ensure output directory exists
-    Mkdirp.sync(outputPath);
+    Mkdirp.sync(environment.outputPath);
 
     // Save configuration
     Filesystem.writeFileSync(

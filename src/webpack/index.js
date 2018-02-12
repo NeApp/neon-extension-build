@@ -19,7 +19,7 @@ import {createChunks} from './chunks';
 
 const Logger = Vorpal.logger;
 
-export function createConfiguration(browser, environment, outputPath) {
+export function createConfiguration(browser, environment) {
     return {
         profile: true,
 
@@ -29,7 +29,7 @@ export function createConfiguration(browser, environment, outputPath) {
 
         output: {
             filename: '[name].js',
-            path: outputPath,
+            path: environment.outputPath,
 
             devtoolModuleFilenameTemplate: (module) => {
                 return generateModuleIdentifier(browser, environment, module);

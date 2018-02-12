@@ -21,7 +21,7 @@ export const Archive = Task.create({
     return createZip({
         archive: Path.join(environment.buildPath, 'Neon-' + browser.versionName + '.zip'),
 
-        source: Path.join(environment.buildPath, 'unpacked'),
+        source: environment.outputPath,
         pattern: '**/*'
     });
 });

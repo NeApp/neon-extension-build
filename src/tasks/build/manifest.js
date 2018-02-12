@@ -25,12 +25,10 @@ export const Manifest = Task.create({
         Extension
     ]
 }, function(log, browser, environment) {
-    let outputPath = Path.join(environment.options['build-dir'], browser.name, environment.name, 'unpacked');
-
     // Build manifest from modules
-    return buildModuleManifests(browser, outputPath)
-        .then((manifests) => buildManifest(browser, outputPath, manifests))
-        .then((manifest) => Filesystem.writeJson(Path.join(outputPath, 'manifest.json'), manifest, {
+    return buildModuleManifests(browser, environment)
+        .then((manifests) => buildManifest(browser, environment, manifests))
+        .then((manifest) => Filesystem.writeJson(Path.join(environment.outputPath, 'manifest.json'), manifest, {
             spaces: 2
         }));
 });
@@ -85,7 +83,7 @@ function getExtensionManifest(browser) {
     };
 }
 
-function buildManifest(browser, outputPath, manifests) {
+function buildManifest(browser, environment, manifests) {
     let current = CloneDeep(getExtensionManifest(browser));
 
     // Merge module manifests
@@ -125,7 +123,9 @@ function buildManifest(browser, outputPath, manifests) {
 
     // Remove background scripts that don't exist
     if(!IsNil(current.background.scripts)) {
-        Remove(current.background.scripts, (path) => !Filesystem.existsSync(Path.join(outputPath, path)));
+        Remove(current.background.scripts, (path) =>
+            !Filesystem.existsSync(Path.join(environment.outputPath, path))
+        );
     }
 
     // Sort arrays
@@ -137,7 +137,7 @@ function buildManifest(browser, outputPath, manifests) {
     return OmitBy(current, IsNil);
 }
 
-function buildModuleManifest(browser, outputPath, module) {
+function buildModuleManifest(browser, environment, module) {
     let manifest = {
         icons: {},
 
@@ -157,18 +157,16 @@ function buildModuleManifest(browser, outputPath, module) {
     // Content Scripts (if the browser doesn't support declarative content)
     if(!browser.supports.api['declarativeContent'] || !browser.supports.api['permissions']) {
         manifest.content_scripts = module.manifest.content_scripts.map((contentScript) =>
-            createContentScript(browser, outputPath, contentScript)
+            createContentScript(browser, environment.outputPath, contentScript)
         );
     }
 
     return manifest;
 }
 
-function buildModuleManifests(browser, outputPath) {
-    return Promise.all(Map(Filter(browser.modules, (module) =>
-        module.type !== 'package'
-        ), (module) =>
-            buildModuleManifest(browser, outputPath, module)
+function buildModuleManifests(browser, environment) {
+    return Promise.all(Map(Filter(browser.modules, (module) => module.type !== 'package'), (module) =>
+        buildModuleManifest(browser, environment, module)
     ));
 }
 
@@ -212,18 +210,18 @@ function buildModulePermissions(browser, module) {
     };
 }
 
-export function createContentScript(browser, outputPath, contentScript) {
+export function createContentScript(browser, environment, contentScript) {
     if(IsNil(contentScript) || IsNil(contentScript.conditions)) {
         throw new Error('Invalid content script definition');
     }
 
     return {
         css: Filter(contentScript.css || [], (path) =>
-            Filesystem.existsSync(Path.join(outputPath, path))
+            Filesystem.existsSync(Path.join(environment.outputPath, path))
         ),
 
         js: Filter(contentScript.js || [], (path) =>
-            Filesystem.existsSync(Path.join(outputPath, path))
+            Filesystem.existsSync(Path.join(environment.outputPath, path))
         ),
 
         matches: contentScript.conditions.map((condition) => {

@@ -15,8 +15,13 @@ export function resolve(name, browser, options) {
 }
 
 function resolveEnvironment(environment, browser, options) {
+    let buildPath = Path.join(options['build-dir'], browser.name, environment.name);
+
     return Merge(CloneDeep(environment), {
-        buildPath: Path.join(options['build-dir'], browser.name, environment.name),
+        outputPath: Path.join(buildPath, 'unpacked'),
+        buildPath,
+
+        packagePath: options['package-dir'],
 
         options,
         tasks: {},

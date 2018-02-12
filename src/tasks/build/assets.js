@@ -20,14 +20,12 @@ export const Assets = Task.create({
         Clean
     ]
 }, function(log, browser, environment) {
-    const outputPath = Path.join(environment.options['build-dir'], browser.name, environment.name, 'unpacked');
-
     // Ensure output directory exists
-    Mkdirp.sync(outputPath);
+    Mkdirp.sync(environment.outputPath);
 
     // Copy assets to build directory
     return Promise.all(Map(browser.modules, (module) => {
-        let destinationPath = outputPath;
+        let destinationPath = environment.outputPath;
         let sourcePath = Path.join(module.path, 'assets');
 
         // Ensure source path exists
