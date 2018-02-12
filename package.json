@@ -41,6 +41,7 @@
     "yazl": "^2.4.2"
   },
   "scripts": {
-    "start": "babel-node src/index.js"
+    "start": "babel-node src/index.js",
+    "test": "eslint src/"
   }
 }
