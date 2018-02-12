@@ -9,8 +9,10 @@ import Set from 'lodash/set';
 import UniqBy from 'lodash/uniqBy';
 
 import ValidatorPlugin from './plugins/validator';
+import Vorpal from '../core/vorpal';
 
 
+const Logger = Vorpal.logger;
 const DependencyVersionRegex = /^\d+\.\d+\.\d+(\-\w+(\.\d+)?)?$/g;
 
 const IgnoredPackages = [
@@ -92,9 +94,7 @@ export class Validator {
             });
 
             if(IsNil(module)) {
-                GulpUtil.log(GulpUtil.colors.yellow(
-                    '[' + dep.name + '] Unknown source: "' + source + '"'
-                ));
+                Logger.warn('[' + dep.name + '] Unknown source: "' + source + '"');
                 return false;
             }
         }
@@ -109,13 +109,9 @@ export class Validator {
         // Ensure dependency definition was found
         if(IsNil(dependency)) {
             if(!IsNil(module)) {
-                GulpUtil.log(GulpUtil.colors.red(
-                    'Unable to find "' + dep.name + '" dependency for "' + module.name + '"'
-                ));
+                Logger.error('Unable to find "' + dep.name + '" dependency for "' + module.name + '"');
             } else {
-                GulpUtil.log(GulpUtil.colors.red(
-                    'Unable to find "' + dep.name + '" dependency'
-                ));
+                Logger.error('Unable to find "' + dep.name + '" dependency');
             }
 
             this._error = true;
@@ -125,15 +121,15 @@ export class Validator {
         // Ensure dependency is pinned to a version
         if(!dependency.match(DependencyVersionRegex)) {
             if(!IsNil(moduleDependency)) {
-                GulpUtil.log(GulpUtil.colors.red(
+                Logger.error(
                     'Dependency "' + dep.name + '" for "' + module.name + '" ' +
                     'should be pinned to a version (found: ' + dependency + ')'
-                ));
+                );
             } else {
-                GulpUtil.log(GulpUtil.colors.red(
+                Logger.error(
                     'Dependency "' + dep.name + '" ' +
                     'should be pinned to a version (found: ' + dependency + ')'
-                ));
+                );
             }
 
             this._error = true;
@@ -142,10 +138,10 @@ export class Validator {
 
         // Ensure dependencies aren't duplicated
         if(!IsNil(moduleDependency) && !IsNil(extensionDependency)) {
-            GulpUtil.log(GulpUtil.colors.red(
+            Logger.error(
                 'Dependency "' + dep.name + '" has been duplicated ' +
                 '(extension: ' + extensionDependency + ', ' + module.name + ': ' + moduleDependency + ')'
-            ));
+            );
 
             this._error = true;
             return false;
@@ -167,9 +163,7 @@ export class Validator {
 
             // Ensure peer dependency is defined
             if(!IsNil(extensionDependency) && IsNil(modulePeerDependency)) {
-                GulpUtil.log(GulpUtil.colors.red(
-                    '"' + dep.name + '" should be defined as a peer dependency in "' + module.name + '"'
-                ));
+                Logger.error('"' + dep.name + '" should be defined as a peer dependency in "' + module.name + '"');
 
                 this._error = true;
                 return false;
@@ -177,9 +171,7 @@ export class Validator {
 
             // Ensure peer dependency is a caret range
             if(!IsNil(extensionDependency) && modulePeerDependency.indexOf('^') !== 0) {
-                GulpUtil.log(GulpUtil.colors.red(
-                    '"' + dep.name + '" peer dependency in "' + module.name + '" should be a caret range'
-                ));
+                Logger.error('"' + dep.name + '" peer dependency in "' + module.name + '" should be a caret range');
 
                 this._error = true;
                 return false;
@@ -187,10 +179,10 @@ export class Validator {
 
             // Ensure extension dependency matches peer dependency range
             if(!IsNil(extensionDependency) && !SemanticVersion.satisfies(extensionDependency, modulePeerDependency)) {
-                GulpUtil.log(GulpUtil.colors.red(
+                Logger.error(
                     '"' + dep.name + '" peer dependency in "' + module.name + '" (' + modulePeerDependency + ')' +
                     ' is not satisfied by extension version: ' + extensionDependency
-                ));
+                );
 
                 this._error = true;
                 return false;
@@ -242,13 +234,9 @@ export class Validator {
 
             // Display warning
             if(!IsNil(moduleName)) {
-                GulpUtil.log(GulpUtil.colors.yellow(
-                    prefix + ' "' + name + '" for "' + moduleName + '" is not required'
-                ));
+                Logger.warn(prefix + ' "' + name + '" for "' + moduleName + '" is not required');
             } else {
-                GulpUtil.log(GulpUtil.colors.yellow(
-                    prefix + ' "' + name + '" is not required'
-                ));
+                Logger.warn(prefix + ' "' + name + '" is not required');
             }
         }
     }
