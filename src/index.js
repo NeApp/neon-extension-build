@@ -1,3 +1,5 @@
+#!/usr/bin/env babel-node
+
 import Vorpal from './core/vorpal';
 import './tasks';
 
