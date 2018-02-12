@@ -9,7 +9,7 @@ import {Task} from '../../core/helpers';
 
 
 export const Bintray = Task.create({
-    name: 'bintray',
+    name: 'deploy:bintray',
     description: 'Create bintray descriptor for the built extension.',
 
     required: [

@@ -8,7 +8,7 @@ import {createZip} from '../../core/zip';
 
 
 export const Archive = Task.create({
-    name: 'archive',
+    name: 'deploy:archive',
     description: 'Create an archive of the built extension.',
 
     required: [
