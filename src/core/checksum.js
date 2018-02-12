@@ -46,18 +46,18 @@ export function calculateMany(base, source) {
     });
 }
 
+function encodeHashes(hashes) {
+    let lines = Map(Object.keys(hashes).sort(), (key) => {
+        return `${hashes[key]}  ${key}\n`;
+    });
+
+    return lines.join('');
+}
+
 export function writeMany(base, source, destination = 'MD5SUMS') {
     return calculateMany(base, source).then((hashes) =>
         Filesystem.writeFile(Path.join(base, destination), encodeHashes(hashes))
     );
-}
-
-function encodeHashes(hashes) {
-    let lines = Map(Object.keys(hashes).sort(), (key) => {
-        return hashes[key] + '  ' + key + '\n';
-    });
-
-    return lines.join('');
 }
 
 export default {

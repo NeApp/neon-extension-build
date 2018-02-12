@@ -19,7 +19,7 @@ export const Archive = Task.create({
 }, (log, browser, environment) => {
     // Create archive of build
     return createZip({
-        archive: Path.join(environment.buildPath, 'Neon-' + browser.versionName + '.zip'),
+        archive: Path.join(environment.buildPath, `Neon-${browser.versionName}.zip`),
 
         source: environment.outputPath,
         pattern: '**/*'

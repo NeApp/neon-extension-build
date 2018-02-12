@@ -9,6 +9,7 @@ import IsPlainObject from 'lodash/isPlainObject';
 import KeyBy from 'lodash/keyBy';
 import Map from 'lodash/map';
 import Merge from 'lodash/merge';
+import Mkdirp from 'mkdirp';
 import OmitBy from 'lodash/omitBy';
 import OrderBy from 'lodash/orderBy';
 import Path from 'path';
@@ -20,7 +21,6 @@ import Clean from '../clean';
 import Json from '../../core/json';
 import {Task} from '../../core/helpers';
 import {sortKey} from '../../core/helpers/value';
-import Mkdirp from "mkdirp";
 
 
 export const BaseAuthor = {
@@ -34,44 +34,23 @@ export const BaseAuthor = {
     packages: []
 };
 
-export const CreditsTask = Task.create({
-    name: 'build:credits',
-    description: 'Build extension credits.',
+function mergeContributor(a, b) {
+    return Merge(a, {
+        ...b,
 
-    required: [
-        Clean
-    ]
-}, (log, browser, environment) => {
-    // Ensure output directory exists
-    Mkdirp.sync(environment.outputPath);
+        commits: a.commits + b.commits,
 
-    // Build list of packages
-    let modules = Object.values(browser.modules).concat([
-        { name: 'neon-extension-build', path: environment.builderPath }
-    ]);
+        modules: Uniq([
+            ...a.modules,
+            ...b.modules
+        ]),
 
-    // Fetch module credits
-    return Promise.all(Map(modules, (pkg) => {
-        log.debug('Fetching credits for "' + pkg.name + '"...');
-
-        return fetchCredits(pkg.name, pkg.path);
-    })).then((modules) => {
-        let credits = {
-            libraries: getLibraries(modules),
-            people: getPeople(modules)
-        };
-
-        log.debug(
-            'Writing credits for ' + modules.length + ' module(s) ' +
-            '[' + credits.libraries.length + ' libraries, ' + credits.people.length + ' people]'
-        );
-
-        // Write credits to build directory
-        return Filesystem.writeJson(Path.join(environment.outputPath, 'credits.json'), credits, {
-            spaces: 2
-        });
+        packages: Uniq([
+            ...a.packages,
+            ...b.packages
+        ])
     });
-});
+}
 
 function getLibraries(modules) {
     let libraries = {};
@@ -186,6 +165,26 @@ function getPeople(modules) {
     );
 }
 
+function fetchPackageCredits(path) {
+    function process(credits, initial) {
+        return Reduce(credits, (result, value) => {
+            if(Array.isArray(value)) {
+                process(value, initial);
+            } else {
+                result.push(value);
+            }
+
+            return result;
+        }, initial);
+    }
+
+    return Credits(path).then((credits) => ({
+        bower: process(credits.bower, []),
+        jspm: process(credits.jspm, []),
+        npm: process(credits.npm, [])
+    }));
+}
+
 function fetchCredits(name, path) {
     return Json.read(Path.join(path, 'contributors.json'), []).then((contributors) => {
         let result = KeyBy(Map(contributors, (contributor) => ({
@@ -251,42 +250,43 @@ function fetchCredits(name, path) {
     });
 }
 
-function fetchPackageCredits(path) {
-    function process(credits, initial) {
-        return Reduce(credits, (result, value) => {
-            if(Array.isArray(value)) {
-                process(value, initial);
-            } else {
-                result.push(value);
-            }
+export const CreditsTask = Task.create({
+    name: 'build:credits',
+    description: 'Build extension credits.',
 
-            return result;
-        }, initial);
-    }
+    required: [
+        Clean
+    ]
+}, (log, browser, environment) => {
+    // Ensure output directory exists
+    Mkdirp.sync(environment.outputPath);
 
-    return Credits(path).then((credits) => ({
-        bower: process(credits.bower, []),
-        jspm: process(credits.jspm, []),
-        npm: process(credits.npm, [])
-    }));
-}
+    // Build list of packages
+    let modules = Object.values(browser.modules).concat([
+        { name: 'neon-extension-build', path: environment.builderPath }
+    ]);
 
-function mergeContributor(a, b) {
-    return Merge(a, {
-        ...b,
+    // Fetch module credits
+    return Promise.all(Map(modules, (pkg) => {
+        log.debug(`Fetching credits for "${pkg.name}"...`);
 
-        commits: a.commits + b.commits,
+        return fetchCredits(pkg.name, pkg.path);
+    })).then((modules) => {
+        let credits = {
+            libraries: getLibraries(modules),
+            people: getPeople(modules)
+        };
 
-        modules: Uniq([
-            ...a.modules,
-            ...b.modules
-        ]),
+        log.debug(
+            `Writing credits for ${modules.length} module(s) ` +
+            `[${credits.libraries.length} libraries, ${credits.people.length} people]`
+        );
 
-        packages: Uniq([
-            ...a.packages,
-            ...b.packages
-        ])
+        // Write credits to build directory
+        return Filesystem.writeJson(Path.join(environment.outputPath, 'credits.json'), credits, {
+            spaces: 2
+        });
     });
-}
+});
 
 export default CreditsTask;

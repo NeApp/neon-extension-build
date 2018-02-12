@@ -16,57 +16,40 @@ import Extension from './extension';
 import {Task} from '../../core/helpers';
 
 
-export const Manifest = Task.create({
-    name: 'build:manifest',
-    description: 'Build extension manifest.',
-
-    required: [
-        Clean,
-        Extension
-    ]
-}, function(log, browser, environment) {
-    // Build manifest from modules
-    return buildModuleManifests(browser, environment)
-        .then((manifests) => buildManifest(browser, environment, manifests))
-        .then((manifest) => Filesystem.writeJson(Path.join(environment.outputPath, 'manifest.json'), manifest, {
-            spaces: 2
-        }));
-});
-
 function getExtensionManifest(browser) {
     let permissions = [
         ...browser.extension.manifest.origins,
         ...browser.extension.manifest.permissions
     ];
 
-    let optional_permissions = [
+    let optionalPermissions = [
         ...browser.extension.manifest.optional_origins,
         ...browser.extension.manifest.optional_permissions
     ];
 
     return {
-        manifest_version: 2,
+        'manifest_version': 2,
 
-        applications: null,
+        'applications': null,
 
-        name: browser.extension.title,
-        version: browser.version,
-        version_name: null,
+        'name': browser.extension.title,
+        'version': browser.version,
+        'version_name': null,
 
-        description: null,
-        icons: {},
+        'description': null,
+        'icons': {},
 
-        permissions: permissions,
-        optional_permissions: optional_permissions,
+        'permissions': permissions,
+        'optional_permissions': optionalPermissions,
 
-        background: {},
-        content_scripts: [],
-        options_ui: {},
-        web_accessible_resources: [],
+        'background': {},
+        'content_scripts': [],
+        'options_ui': {},
+        'web_accessible_resources': [],
 
         // Include version name
         ...(browser.includeVersionName && {
-            version_name: browser.versionName
+            'version_name': browser.versionName
         }),
 
         // Include extension manifest properties
@@ -94,80 +77,62 @@ function buildManifest(browser, environment, manifests) {
             ...current,
             ...manifest,
 
-            icons: {
+            'icons': {
                 ...current.icons,
                 ...manifest.icons
             },
 
-            content_scripts: [
+            'content_scripts': [
                 ...current.content_scripts,
                 ...manifest.content_scripts
             ],
 
-            web_accessible_resources: [
+            'web_accessible_resources': [
                 ...current.web_accessible_resources,
                 ...manifest.web_accessible_resources
             ],
 
-            permissions: [
+            'permissions': [
                 ...current.permissions,
                 ...manifest.permissions
             ],
 
-            optional_permissions: [
+            'optional_permissions': [
                 ...current.optional_permissions,
                 ...manifest.optional_permissions
-            ],
+            ]
         };
     }
 
     // Remove background scripts that don't exist
-    if(!IsNil(current.background.scripts)) {
-        Remove(current.background.scripts, (path) =>
+    if(!IsNil(current['background'].scripts)) {
+        Remove(current['background'].scripts, (path) =>
             !Filesystem.existsSync(Path.join(environment.outputPath, path))
         );
     }
 
     // Sort arrays
-    current.permissions = Uniq(current.permissions).sort();
-    current.optional_permissions = Uniq(current.optional_permissions).sort();
+    current['permissions'] = Uniq(current.permissions).sort();
+    current['optional_permissions'] = Uniq(current.optional_permissions).sort();
 
-    current.web_accessible_resources = current.web_accessible_resources.sort();
+    current['web_accessible_resources'] = current.web_accessible_resources.sort();
 
     return OmitBy(current, IsNil);
 }
 
-function buildModuleManifest(browser, environment, module) {
-    let manifest = {
-        icons: {},
+function getContentScriptPatterns(module) {
+    return Reduce(module.manifest.content_scripts, (result, contentScript) => {
+        ForEach(contentScript.conditions, (condition) => {
+            if(IsNil(condition) || IsNil(condition.pattern)) {
+                throw new Error('Invalid content script condition');
+            }
 
-        content_scripts: [],
-        web_accessible_resources: [],
+            // Include pattern in result
+            result.push(condition.pattern);
+        });
 
-        // Retrieve module manifest properties
-        ...Pick(module.manifest, [
-            'icons',
-            'web_accessible_resources'
-        ]),
-
-        // Build module permissions
-        ...buildModulePermissions(browser, module)
-    };
-
-    // Content Scripts (if the browser doesn't support declarative content)
-    if(!browser.supports.api['declarativeContent'] || !browser.supports.api['permissions']) {
-        manifest.content_scripts = module.manifest.content_scripts.map((contentScript) =>
-            createContentScript(browser, environment.outputPath, contentScript)
-        );
-    }
-
-    return manifest;
-}
-
-function buildModuleManifests(browser, environment) {
-    return Promise.all(Map(Filter(browser.modules, (module) => module.type !== 'package'), (module) =>
-        buildModuleManifest(browser, environment, module)
-    ));
+        return result;
+    }, []);
 }
 
 function buildModulePermissions(browser, module) {
@@ -176,14 +141,14 @@ function buildModulePermissions(browser, module) {
         ...module.manifest.permissions
     ];
 
-    let optional_permissions = [
+    let optionalPermissions = [
         ...module.manifest.optional_origins,
         ...module.manifest.optional_permissions
     ];
 
     // Declarative Content
     if(browser.supports.api['declarativeContent'] && browser.supports.api['permissions']) {
-        optional_permissions = optional_permissions.concat(getContentScriptPatterns(module));
+        optionalPermissions = optionalPermissions.concat(getContentScriptPatterns(module));
     }
 
     // Destination / Source
@@ -191,26 +156,26 @@ function buildModulePermissions(browser, module) {
         if(browser.supports.api['permissions']) {
             // Request permissions when the module is enabled
             return {
-                permissions: [],
-                optional_permissions: optional_permissions.concat(permissions)
-            };
-        } else {
-            // Request permissions on extension installation
-            return {
-                permissions: permissions.concat(optional_permissions),
-                optional_permissions: []
+                'permissions': [],
+                'optional_permissions': optionalPermissions.concat(permissions)
             };
         }
+
+        // Request permissions on extension installation
+        return {
+            'permissions': permissions.concat(optionalPermissions),
+            'optional_permissions': []
+        };
     }
 
     // Unknown Module
     return {
-        permissions,
-        optional_permissions
+        'permissions': permissions,
+        'optional_permissions': optionalPermissions
     };
 }
 
-export function createContentScript(browser, environment, contentScript) {
+function createContentScript(browser, environment, contentScript) {
     if(IsNil(contentScript) || IsNil(contentScript.conditions)) {
         throw new Error('Invalid content script definition');
     }
@@ -234,19 +199,54 @@ export function createContentScript(browser, environment, contentScript) {
     };
 }
 
-export function getContentScriptPatterns(module) {
-    return Reduce(module.manifest.content_scripts, (result, contentScript) => {
-        ForEach(contentScript.conditions, (condition) => {
-            if(IsNil(condition) || IsNil(condition.pattern)) {
-                throw new Error('Invalid content script condition');
-            }
+function buildModuleManifest(browser, environment, module) {
+    let manifest = {
+        'icons': {},
 
-            // Include pattern in result
-            result.push(condition.pattern);
-        });
+        'content_scripts': [],
+        'web_accessible_resources': [],
 
-        return result;
-    }, []);
+        // Retrieve module manifest properties
+        ...Pick(module.manifest, [
+            'icons',
+            'web_accessible_resources'
+        ]),
+
+        // Build module permissions
+        ...buildModulePermissions(browser, module)
+    };
+
+    // Content Scripts (if the browser doesn't support declarative content)
+    if(!browser.supports.api['declarativeContent'] || !browser.supports.api['permissions']) {
+        manifest['content_scripts'] = module.manifest['content_scripts'].map((contentScript) =>
+            createContentScript(browser, environment.outputPath, contentScript)
+        );
+    }
+
+    return manifest;
 }
+
+function buildModuleManifests(browser, environment) {
+    return Promise.all(Map(Filter(browser.modules, (module) => module.type !== 'package'), (module) =>
+        buildModuleManifest(browser, environment, module)
+    ));
+}
+
+export const Manifest = Task.create({
+    name: 'build:manifest',
+    description: 'Build extension manifest.',
+
+    required: [
+        Clean,
+        Extension
+    ]
+}, function(log, browser, environment) {
+    // Build manifest from modules
+    return buildModuleManifests(browser, environment)
+        .then((manifests) => buildManifest(browser, environment, manifests))
+        .then((manifest) => Filesystem.writeJson(Path.join(environment.outputPath, 'manifest.json'), manifest, {
+            spaces: 2
+        }));
+});
 
 export default Manifest;

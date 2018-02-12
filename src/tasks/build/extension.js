@@ -14,63 +14,6 @@ import {Task} from '../../core/helpers';
 import {createConfiguration} from '../../webpack';
 
 
-export const Extension = Task.create({
-    name: 'build:extension',
-    description: 'Build extension modules.',
-
-    required: [
-        Clean
-    ]
-}, function(log, browser, environment) {
-    const buildPath = Path.join(environment.options['build-dir'], browser.name, environment.name);
-
-    // Construct compiler
-    let compiler;
-
-    try {
-        compiler = constructCompiler(browser, environment, buildPath);
-    } catch(e) {
-        return Promise.reject(e);
-    }
-
-    // Run compiler
-    return runCompiler(compiler)
-        .then((stats) => {
-            // Log statistics
-            log.info(stats.toString('normal'));
-
-            // Write statistics to file
-            writeStats(buildPath, stats);
-
-            // Exit if there is any errors
-            if(stats.hasErrors()) {
-                return Promise.reject(new Error('Build failed'));
-            }
-        })
-        // Display extracted modules
-        .then(() => {
-            let extracted = environment.webpack.extracted;
-
-            if(Object.keys(extracted).length < 1) {
-                return Promise.reject(new Error('No modules were extracted'));
-            }
-
-            let nameLength = Reduce(Object.keys(extracted), (result, name) => {
-                if(name.length > result) {
-                    return name.length;
-                }
-
-                return result;
-            }, 0);
-
-            ForEach(Object.keys(extracted).sort(), (name) => {
-                log.debug(Chalk.green(
-                    PadEnd(name, nameLength) + ' => ' + extracted[name]
-                ));
-            });
-        });
-});
-
 function constructCompiler(browser, environment, buildPath) {
     // Generate configuration
     let configuration;
@@ -78,7 +21,7 @@ function constructCompiler(browser, environment, buildPath) {
     try {
         configuration = createConfiguration(browser, environment);
     } catch(e) {
-        throw new Error('Unable to generate configuration: ' + e.stack);
+        throw new Error(`Unable to generate configuration: ${e.stack}`);
     }
 
     // Ensure output directory exists
@@ -113,5 +56,66 @@ function writeStats(buildDir, stats) {
         stats.toJson('verbose')
     );
 }
+
+export const Extension = Task.create({
+    name: 'build:extension',
+    description: 'Build extension modules.',
+
+    required: [
+        Clean
+    ]
+}, function(log, browser, environment) {
+    const buildPath = Path.join(environment.options['build-dir'], browser.name, environment.name);
+
+    // Construct compiler
+    let compiler;
+
+    try {
+        compiler = constructCompiler(browser, environment, buildPath);
+    } catch(e) {
+        return Promise.reject(e);
+    }
+
+    // Run compiler
+    return runCompiler(compiler)
+        .then((stats) => {
+            // Log statistics
+            log.info(stats.toString('normal'));
+
+            // Write statistics to file
+            writeStats(buildPath, stats);
+
+            // Exit if there is any errors
+            if(stats.hasErrors()) {
+                return Promise.reject(new Error('Build failed'));
+            }
+
+            return stats;
+        })
+        // Display extracted modules
+        .then(() => {
+            let extracted = environment.webpack.extracted;
+
+            if(Object.keys(extracted).length < 1) {
+                return Promise.reject(new Error('No modules were extracted'));
+            }
+
+            let nameLength = Reduce(Object.keys(extracted), (result, name) => {
+                if(name.length > result) {
+                    return name.length;
+                }
+
+                return result;
+            }, 0);
+
+            ForEach(Object.keys(extracted).sort(), (name) => {
+                log.debug(Chalk.green(
+                    `${PadEnd(name, nameLength)} => ${extracted[name]}`
+                ));
+            });
+
+            return extracted;
+        });
+});
 
 export default Extension;

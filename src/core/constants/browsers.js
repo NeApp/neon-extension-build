@@ -29,6 +29,6 @@ const FirefoxBrowser = {
 };
 
 export default {
-    chrome:     ChromeBrowser,
-    firefox:    FirefoxBrowser
+    chrome: ChromeBrowser,
+    firefox: FirefoxBrowser
 };

@@ -8,23 +8,6 @@ import Module from './module';
 import Version from './version';
 
 
-export function resolve(packageDir, name) {
-    let browsers;
-
-    if(name === 'all') {
-        browsers = Object.values(Browsers);
-    } else if(!IsNil(Browsers[name])) {
-        browsers = [Browsers[name]];
-    } else {
-        throw new Error('Invalid browser: "' + name + '"');
-    }
-
-    // Resolve browsers
-    return Promise.all(browsers.map((browser) =>
-        resolveBrowser(packageDir, browser)
-    ));
-}
-
 function resolveBrowser(packageDir, browser) {
     return Promise.resolve(CloneDeep(browser))
         .then((browser) => ({
@@ -48,13 +31,30 @@ function resolveBrowser(packageDir, browser) {
         .then((browser) => ({
             ...browser,
 
-            supports: browser.modules['neon-extension-browser-' + browser.name].browser
+            supports: browser.modules[`neon-extension-browser-${browser.name}`].browser
         }))
         // Resolve browser version
         .then((browser) => ({
             ...browser,
             ...Version.resolveBrowser(browser)
         }));
+}
+
+export function resolve(packageDir, name) {
+    let browsers;
+
+    if(name === 'all') {
+        browsers = Object.values(Browsers);
+    } else if(!IsNil(Browsers[name])) {
+        browsers = [Browsers[name]];
+    } else {
+        throw new Error(`Invalid browser: "${name}"`);
+    }
+
+    // Resolve browsers
+    return Promise.all(browsers.map((browser) =>
+        resolveBrowser(packageDir, browser)
+    ));
 }
 
 export default {

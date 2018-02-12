@@ -17,7 +17,7 @@ export const Clean = Task.create({
     }
 
     log.debug('Cleaning the build directory...');
-    log.debug(' - Path: "' + path + '"');
+    log.debug(` - Path: "${path}"`);
 
     return Delete([
         Path.join(path, '**/*')

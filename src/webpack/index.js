@@ -19,6 +19,318 @@ import {createChunks} from './chunks';
 
 const Logger = Vorpal.logger;
 
+function cleanModuleIdentifier(value) {
+    return value.replace(/\s/g, '/').replace(/\\/g, '/');
+}
+
+function encodeExtensionManifest(extension) {
+    return {
+        ...Pick(extension, [
+            'name',
+            'version',
+
+            'title',
+            'description',
+
+            // Required Permissions
+            'origins',
+            'permissions',
+
+            // Optional Permissions
+            'optional_origins',
+            'optional_permissions'
+        ])
+    };
+}
+
+function encodeModuleManifests(modules) {
+    let manifests = MapValues(modules || {}, (module) => Pick(module, [
+        'name',
+        'type',
+        'key',
+
+        'title',
+        'version',
+
+        'content_scripts',
+        'services',
+
+        // Required Permissions
+        'origins',
+        'permissions',
+
+        // Optional Permissions
+        'optional_origins',
+        'optional_permissions'
+    ]));
+
+    // Sort manifests by key
+    return Pick(manifests, Object.keys(manifests).sort());
+}
+
+function getValidPath(...paths) {
+    for(let i = 0; i < paths.length; i++) {
+        if(Filesystem.existsSync(paths[i])) {
+            return paths[i];
+        }
+    }
+
+    return null;
+}
+
+function getBabelPaths(browser, environment) {
+    let modules = Filter(browser.modules, (module) => module.type !== 'package');
+
+    // Build list of babel includes
+    let items = [];
+
+    ForEach(SortBy(modules, 'name'), (module) => {
+        // Include source directory
+        items.push(Path.resolve(module.path, 'src'));
+
+        // Include additional directories from manifest
+        items.push(...module.webpack.babel
+            .map((path) => getValidPath(
+                Path.resolve(module.path, path),
+
+                // Fallback to package modules
+                Path.resolve(browser.path, path)
+            ))
+            .filter((value) =>
+                value !== null
+            )
+        );
+    });
+
+    return items;
+}
+
+function getModuleAliases(browser) {
+    let modules = Filter(browser.modules, (module) => module.type !== 'package');
+
+    return Object.assign({}, ...SortBy(modules, 'name').map((module) => {
+        let result = {};
+
+        // Module
+        result[module.name] = Path.resolve(module.path, 'src');
+
+        // Aliases
+        for(let name in module.webpack.alias) {
+            if(!module.webpack.alias.hasOwnProperty(name)) {
+                continue;
+            }
+
+            let target = module.webpack.alias[name];
+
+            // Parse alias
+            if(target === './') {
+                result[name] = Path.resolve(module.path, 'src');
+            } else {
+                result[name] = target;
+            }
+        }
+
+
+        return result;
+    }));
+}
+
+function getModuleName(basePath, path) {
+    path = Path.normalize(Path.relative(basePath, path));
+
+    let end = path.indexOf(Path.sep);
+
+    if(path[0] === '@') {
+        end = path.indexOf(Path.sep, end + 1);
+    }
+
+    return path.substring(0, end);
+}
+
+function getModuleDetails(browser, environment, path) {
+    if(IsNil(path)) {
+        return null;
+    }
+
+    // Normalize path
+    path = Path.normalize(path);
+
+    // Find matching module
+    let module = Find(browser.modules, (module) => {
+        if(module.type === 'package') {
+            return false;
+        }
+
+        return path.startsWith(module.path);
+    });
+
+    // Module
+    if(!IsNil(module)) {
+        if(path.startsWith(Path.resolve(module.path, 'node_modules'))) {
+            return {
+                type: 'dependency',
+                name: getModuleName(Path.resolve(module.path, 'node_modules'), path)
+            };
+        }
+
+        if(module.name === 'neon-extension-core') {
+            return {
+                type: 'core',
+                name: module.name
+            };
+        }
+
+        if(module.name === 'neon-extension-framework') {
+            return {
+                type: 'framework',
+                name: module.name
+            };
+        }
+
+        if(module.name.startsWith('neon-extension-browser-')) {
+            return {
+                type: 'browser',
+                name: module.name
+            };
+        }
+
+        if(module.name.startsWith('neon-extension-destination-')) {
+            return {
+                type: 'destination',
+                name: module.name
+            };
+        }
+
+        if(module.name.startsWith('neon-extension-source-')) {
+            return {
+                type: 'source',
+                name: module.name
+            };
+        }
+    }
+
+    // Package
+    if(path.startsWith(Path.resolve(browser.path, 'node_modules'))) {
+        return {
+            type: 'dependency',
+            name: getModuleName(Path.resolve(browser.path, 'node_modules'), path)
+        };
+    }
+
+    return null;
+}
+
+function getModulePaths(browser, environment) {
+    let modules = Filter(browser.modules, (module) => module.type !== 'package');
+
+    return [
+        // Shared modules
+        Path.resolve(browser.path, 'node_modules'),
+
+        // Plugin modules
+        ...SortBy(modules, 'name').map((module) =>
+            Path.join(module.path, 'node_modules')
+        )
+    ];
+}
+
+function generateModuleIdentifier(browser, environment, module, fallback) {
+    let suffix = '';
+
+    // Append module identifier on conflicts
+    if(fallback) {
+        suffix = `#${module.moduleId}`;
+    }
+
+    // Ignored
+    if(module.absoluteResourcePath.indexOf('ignored ') === 0) {
+        return `webpack://${cleanModuleIdentifier(module.shortIdentifier)}${suffix}`;
+    }
+
+    // Bootstrap
+    if(module.absoluteResourcePath.indexOf('webpack/bootstrap ') === 0) {
+        return `webpack://${cleanModuleIdentifier(module.shortIdentifier)}${suffix}`;
+    }
+
+    // Convert to relative path
+    let path = Path.resolve(environment.options['package-dir'], module.absoluteResourcePath);
+
+    // Build module identifier
+    return `webpack://${cleanModuleIdentifier(Path.relative(environment.options['package-dir'], path))}${suffix}`;
+}
+
+function isSharedDependency(browser, name) {
+    if(IsNil(name) || name.startsWith('neon-extension-')) {
+        return false;
+    }
+
+    return !IsNil(browser.extension.package.dependencies[name]);
+}
+
+function shouldExtractModule(browser, environment, module, count, options) {
+    options = Merge({
+        chunk: null,
+
+        count: 2,
+        shared: false,
+        types: []
+    }, options || {});
+
+    // Validate options
+    if(IsNil(options.chunk)) {
+        throw new Error('Missing required option: chunk');
+    }
+
+    // Retrieve module details
+    let details = {
+        name: null,
+        type: null,
+
+        ...(getModuleDetails(browser, environment, module.userRequest, options) || {})
+    };
+
+    // Determine if module should be included
+    let include = false;
+
+    if(count >= options.count) {
+        include = true;
+    } else if(options.types.indexOf(details.type) >= 0) {
+        include = true;
+    } else if(options.shared && details.type === 'dependency' && isSharedDependency(browser, details.name)) {
+        include = true;
+    }
+
+    // Log module
+    Logger.debug((include ? Chalk.green : Chalk.red)(
+        `[${options.chunk}] ${module.userRequest} (` +
+        `count: ${count}, ` +
+        `type: "${details.type}", ` +
+        `shared: ${isSharedDependency(browser, details.name)}` +
+        ')'
+    ));
+
+    // Ignore excluded/invalid modules
+    if(IsNil(module.userRequest) || !include) {
+        return include;
+    }
+
+    // Shorten request
+    let request = module.userRequest;
+
+    if(!IsNil(details.name)) {
+        let start = request.indexOf(details.name);
+
+        if(start >= 0) {
+            request = request.substring(start);
+        }
+    }
+
+    // Store extracted module location
+    environment.webpack.extracted[request] = options.chunk;
+
+    return include;
+}
+
 export function createConfiguration(browser, environment) {
     return {
         profile: true,
@@ -53,11 +365,11 @@ export function createConfiguration(browser, environment) {
                             loader: 'eslint-loader',
                             options: {
                                 baseConfig: {
-                                    "settings": {
-                                        "import/resolver": {
-                                            "eslint-import-resolver-node-extended": {
-                                                "alias": getModuleAliases(browser, environment),
-                                                "paths": getModulePaths(browser, environment)
+                                    'settings': {
+                                        'import/resolver': {
+                                            'eslint-import-resolver-node-extended': {
+                                                'alias': getModuleAliases(browser, environment),
+                                                'paths': getModulePaths(browser, environment)
                                             }
                                         }
                                     }
@@ -118,7 +430,7 @@ export function createConfiguration(browser, environment) {
                                 loader: 'css-loader'
                             },
                             {
-                                loader: "sass-loader",
+                                loader: 'sass-loader',
                                 options: {
                                     includePaths: [
                                         Path.resolve(browser.path, 'node_modules/foundation-sites/scss')
@@ -162,7 +474,7 @@ export function createConfiguration(browser, environment) {
 
                 chunks: [].concat(...Filter(browser.modules, { type: 'destination' }).map((module) =>
                     (module.webpack.chunks || []).map((chunk) =>
-                        'destination/' + module.key + '/' + chunk + '/' + chunk
+                        `destination/${module.key}/${chunk}/${chunk}`
                     )
                 )),
 
@@ -178,11 +490,11 @@ export function createConfiguration(browser, environment) {
                 name: 'source/common',
 
                 chunks: [].concat(...Filter(browser.modules, { type: 'source' }).map((module) => [
-                    'source/' + module.key + '/' + module.key,
+                    `source/${module.key}/${module.key}`,
 
                     // Include additional chunks
                     ...(module.webpack.chunks || []).map((chunk) =>
-                        'source/' + module.key + '/' + chunk + '/' + chunk
+                        `source/${module.key}/${chunk}/${chunk}`
                     )
                 ])),
 
@@ -273,12 +585,12 @@ export function createConfiguration(browser, environment) {
                 new Webpack.NamedChunksPlugin(),
 
                 new Webpack.optimize.UglifyJsPlugin()
-            ] : []),
+            ] : [])
         ],
 
         externals: {
-            'jquery':    'jQuery',
-            'react':     'React',
+            'jquery': 'jQuery',
+            'react': 'React',
             'react-dom': 'ReactDOM'
         },
 
@@ -294,320 +606,8 @@ export function createConfiguration(browser, environment) {
             alias: {
                 ...getModuleAliases(browser),
 
-                'lodash-amd': 'lodash-es',
+                'lodash-amd': 'lodash-es'
             }
         }
     };
-}
-
-function encodeExtensionManifest(extension) {
-    return {
-        ...Pick(extension, [
-            'name',
-            'version',
-
-            'title',
-            'description',
-
-            // Required Permissions
-            'origins',
-            'permissions',
-
-            // Optional Permissions
-            'optional_origins',
-            'optional_permissions'
-        ])
-    };
-}
-
-function encodeModuleManifests(modules) {
-    let manifests = MapValues(modules || {}, (module) => Pick(module, [
-        'name',
-        'type',
-        'key',
-
-        'title',
-        'version',
-
-        'content_scripts',
-        'services',
-
-        // Required Permissions
-        'origins',
-        'permissions',
-
-        // Optional Permissions
-        'optional_origins',
-        'optional_permissions'
-    ]));
-
-    // Sort manifests by key
-    return Pick(manifests, Object.keys(manifests).sort());
-}
-
-function getBabelPaths(browser, environment) {
-    let modules = Filter(browser.modules, (module) => module.type !== 'package');
-
-    // Build list of babel includes
-    let items = [];
-
-    ForEach(SortBy(modules, 'name'), (module) => {
-        // Include source directory
-        items.push(Path.resolve(module.path, 'src'));
-
-        // Include additional directories from manifest
-        items.push(...module.webpack.babel
-            .map((path) => getValidPath(
-                Path.resolve(module.path, path),
-
-                // Fallback to package modules
-                Path.resolve(browser.path, path)
-            ))
-            .filter((value) =>
-                value !== null
-            )
-        );
-    });
-
-    return items;
-}
-
-function getModuleAliases(browser) {
-    let modules = Filter(browser.modules, (module) => module.type !== 'package');
-
-    return Object.assign({}, ...SortBy(modules, 'name').map((module) => {
-        let result = {};
-
-        // Module
-        result[module.name] = Path.resolve(module.path, 'src');
-
-        // Aliases
-        for(let name in module.webpack.alias) {
-            if(!module.webpack.alias.hasOwnProperty(name)) {
-                continue;
-            }
-
-            let target = module.webpack.alias[name];
-
-            // Parse alias
-            if(target === './') {
-                result[name] = Path.resolve(module.path, 'src');
-            } else {
-                result[name] = target;
-            }
-        }
-
-
-        return result;
-    }));
-}
-
-function getModulePaths(browser, environment) {
-    let modules = Filter(browser.modules, (module) => module.type !== 'package');
-
-    return [
-        // Shared modules
-        Path.resolve(browser.path, 'node_modules'),
-
-        // Plugin modules
-        ...SortBy(modules, 'name').map((module) =>
-            Path.join(module.path, 'node_modules')
-        )
-    ];
-}
-
-function shouldExtractModule(browser, environment, module, count, options) {
-    options = Merge({
-        chunk: null,
-
-        count: 2,
-        shared: false,
-        types: [],
-    }, options || {});
-
-    // Validate options
-    if(IsNil(options.chunk)) {
-        throw new Error('Missing required option: chunk');
-    }
-
-    // Retrieve module details
-    let details = {
-        name: null,
-        type: null,
-
-        ...(getModuleDetails(browser, environment, module.userRequest, options) || {})
-    };
-
-    // Determine if module should be included
-    let include = false;
-
-    if(count >= options.count) {
-        include = true;
-    } else if(options.types.indexOf(details.type) >= 0) {
-        include = true;
-    } else if(options.shared && details.type === 'dependency' && isSharedDependency(browser, details.name)) {
-        include = true;
-    }
-
-    // Log module
-    Logger.debug((include ? Chalk.green : Chalk.red)(
-        '[' + options.chunk + '] ' + module.userRequest + ' (' +
-            'count: ' + count + ', ' +
-            'type: "' + details.type + '", ' +
-            'shared: ' + isSharedDependency(browser, details.name) +
-        ')'
-    ));
-
-    // Ignore excluded/invalid modules
-    if(IsNil(module.userRequest) || !include) {
-        return include;
-    }
-
-    // Shorten request
-    let request = module.userRequest;
-
-    if(!IsNil(details.name)) {
-        let start = request.indexOf(details.name);
-
-        if(start >= 0) {
-            request = request.substring(start);
-        }
-    }
-
-    // Store extracted module location
-    environment.webpack.extracted[request] = options.chunk;
-
-    return include;
-}
-
-function getModuleDetails(browser, environment, path) {
-    if(IsNil(path)) {
-        return null;
-    }
-
-    // Normalize path
-    path = Path.normalize(path);
-
-    // Find matching module
-    let module = Find(browser.modules, (module) => {
-        if(module.type === 'package') {
-            return false;
-        }
-
-        return path.startsWith(module.path);
-    });
-
-    // Module
-    if(!IsNil(module)) {
-        if(path.startsWith(Path.resolve(module.path, 'node_modules'))) {
-            return {
-                type: 'dependency',
-                name: getModuleName(Path.resolve(module.path, 'node_modules'), path)
-            };
-        }
-
-        if(module.name === 'neon-extension-core') {
-            return {
-                type: 'core',
-                name: module.name
-            };
-        }
-
-        if(module.name === 'neon-extension-framework') {
-            return {
-                type: 'framework',
-                name: module.name
-            };
-        }
-
-        if(module.name.startsWith('neon-extension-browser-')) {
-            return {
-                type: 'browser',
-                name: module.name
-            };
-        }
-
-        if(module.name.startsWith('neon-extension-destination-')) {
-            return {
-                type: 'destination',
-                name: module.name
-            };
-        }
-
-        if(module.name.startsWith('neon-extension-source-')) {
-            return {
-                type: 'source',
-                name: module.name
-            };
-        }
-    }
-
-    // Package
-    if(path.startsWith(Path.resolve(browser.path, 'node_modules'))) {
-        return {
-            type: 'dependency',
-            name: getModuleName(Path.resolve(browser.path, 'node_modules'), path)
-        };
-    }
-
-    return null;
-}
-
-function getModuleName(basePath, path) {
-    path = Path.normalize(Path.relative(basePath, path));
-
-    let end = path.indexOf(Path.sep);
-
-    if(path[0] === '@') {
-        end = path.indexOf(Path.sep, end + 1);
-    }
-
-    return path.substring(0, end);
-}
-
-function isSharedDependency(browser, name) {
-    if(IsNil(name) || name.startsWith('neon-extension-')) {
-        return false;
-    }
-
-    return !IsNil(browser.extension.package.dependencies[name]);
-}
-
-function generateModuleIdentifier(browser, environment, module, fallback) {
-    let suffix = '';
-
-    // Append module identifier on conflicts
-    if(fallback) {
-        suffix = '#' + module.moduleId;
-    }
-
-    // Ignored
-    if(module.absoluteResourcePath.indexOf('ignored ') === 0) {
-        return 'webpack://' + cleanModuleIdentifier(module.shortIdentifier) + suffix;
-    }
-
-    // Bootstrap
-    if(module.absoluteResourcePath.indexOf('webpack/bootstrap ') === 0) {
-        return 'webpack://' + cleanModuleIdentifier(module.shortIdentifier) + suffix;
-    }
-
-    // Convert to relative path
-    let path = Path.resolve(environment.options['package-dir'], module.absoluteResourcePath);
-
-    // Build module identifier
-    return 'webpack://' + cleanModuleIdentifier(Path.relative(environment.options['package-dir'], path)) + suffix;
-}
-
-function cleanModuleIdentifier(value) {
-    return value.replace(/\s/g, '/').replace(/\\/g, '/');
-}
-
-function getValidPath(...paths) {
-    for(let i = 0; i < paths.length; i++) {
-        if(Filesystem.existsSync(paths[i])) {
-            return paths[i];
-        }
-    }
-
-    return null;
 }

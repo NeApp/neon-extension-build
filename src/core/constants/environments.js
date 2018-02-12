@@ -18,14 +18,14 @@ const ProductionEnvironment = {
         minimize: true,
         validate: false,
 
-        devtool: 'hidden-source-map',
+        devtool: 'hidden-source-map'
     }
 };
 
 export default {
-    dev:            DevelopmentEnvironment,
-    development:    DevelopmentEnvironment,
+    dev: DevelopmentEnvironment,
+    development: DevelopmentEnvironment,
 
-    prod:           ProductionEnvironment,
-    production:     ProductionEnvironment
+    prod: ProductionEnvironment,
+    production: ProductionEnvironment
 };

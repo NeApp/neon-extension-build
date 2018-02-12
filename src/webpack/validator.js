@@ -41,7 +41,7 @@ export class Validator {
             let sources = this._getSources(browser, environment, source) || source;
 
             for(let i = 0; i < sources.length; i++) {
-                this.processModuleDependency(browser, environment, sources[i].module.userRequest, module.userRequest)
+                this.processModuleDependency(browser, environment, sources[i].module.userRequest, module.userRequest);
             }
         });
     }
@@ -57,13 +57,13 @@ export class Validator {
         try {
             dep = this._parseDependency(request);
         } catch(e) {
-            console.log('Unable to parse dependency: "' + request + '": ' + e);
+            console.log(`Unable to parse dependency: "${request}": ${e}`);
             return false;
         }
 
         // Validate package information
         if(IsNil(dep)) {
-            console.log('Unable to parse dependency: "' + request + '"');
+            console.log(`Unable to parse dependency: "${request}"`);
             return false;
         }
 
@@ -94,7 +94,7 @@ export class Validator {
             });
 
             if(IsNil(module)) {
-                Logger.warn('[' + dep.name + '] Unknown source: "' + source + '"');
+                Logger.warn(`[${dep.name}] Unknown source: "${source}"`);
                 return false;
             }
         }
@@ -109,9 +109,9 @@ export class Validator {
         // Ensure dependency definition was found
         if(IsNil(dependency)) {
             if(!IsNil(module)) {
-                Logger.error('Unable to find "' + dep.name + '" dependency for "' + module.name + '"');
+                Logger.error(`Unable to find "${dep.name}" dependency for "${module.name}"`);
             } else {
-                Logger.error('Unable to find "' + dep.name + '" dependency');
+                Logger.error(`Unable to find "${dep.name}" dependency`);
             }
 
             this._error = true;
@@ -122,13 +122,13 @@ export class Validator {
         if(!dependency.match(DependencyVersionRegex)) {
             if(!IsNil(moduleDependency)) {
                 Logger.error(
-                    'Dependency "' + dep.name + '" for "' + module.name + '" ' +
-                    'should be pinned to a version (found: ' + dependency + ')'
+                    `Dependency "${dep.name}" for "${module.name}" 
+                    should be pinned to a version (found: ${dependency})`
                 );
             } else {
                 Logger.error(
-                    'Dependency "' + dep.name + '" ' +
-                    'should be pinned to a version (found: ' + dependency + ')'
+                    `Dependency "${dep.name}" 
+                    should be pinned to a version (found: ${dependency})`
                 );
             }
 
@@ -139,8 +139,8 @@ export class Validator {
         // Ensure dependencies aren't duplicated
         if(!IsNil(moduleDependency) && !IsNil(extensionDependency)) {
             Logger.error(
-                'Dependency "' + dep.name + '" has been duplicated ' +
-                '(extension: ' + extensionDependency + ', ' + module.name + ': ' + moduleDependency + ')'
+                `Dependency "${dep.name}" has been duplicated 
+                (extension: ${extensionDependency}, ${module.name}: ${moduleDependency})`
             );
 
             this._error = true;
@@ -163,7 +163,7 @@ export class Validator {
 
             // Ensure peer dependency is defined
             if(!IsNil(extensionDependency) && IsNil(modulePeerDependency)) {
-                Logger.error('"' + dep.name + '" should be defined as a peer dependency in "' + module.name + '"');
+                Logger.error(`"${dep.name}" should be defined as a peer dependency in "${module.name}"`);
 
                 this._error = true;
                 return false;
@@ -171,7 +171,7 @@ export class Validator {
 
             // Ensure peer dependency is a caret range
             if(!IsNil(extensionDependency) && modulePeerDependency.indexOf('^') !== 0) {
-                Logger.error('"' + dep.name + '" peer dependency in "' + module.name + '" should be a caret range');
+                Logger.error(`"${dep.name}" peer dependency in "${module.name}" should be a caret range`);
 
                 this._error = true;
                 return false;
@@ -180,8 +180,8 @@ export class Validator {
             // Ensure extension dependency matches peer dependency range
             if(!IsNil(extensionDependency) && !SemanticVersion.satisfies(extensionDependency, modulePeerDependency)) {
                 Logger.error(
-                    '"' + dep.name + '" peer dependency in "' + module.name + '" (' + modulePeerDependency + ')' +
-                    ' is not satisfied by extension version: ' + extensionDependency
+                    `"${dep.name}" peer dependency in "${module.name}" (${modulePeerDependency}) 
+                    is not satisfied by extension version: ${extensionDependency}`
                 );
 
                 this._error = true;
@@ -198,17 +198,22 @@ export class Validator {
         }
 
         // Ensure there are no unused extension dependencies
-        this._checkDependencies('Dependency', browser.extension.package.dependencies, this.dependencies[environment][null]);
+        this._checkDependencies('Dependency',
+            browser.extension.package.dependencies,
+            this.dependencies[environment][null]
+        );
 
         // Ensure there are no unused module dependencies
         ForEach(Filter(browser.modules, (module) => module.type !== 'package'), (module) => {
-            this._checkDependencies(
-                'Dependency', module.package.dependencies, this.dependencies[environment][module.name],
+            this._checkDependencies('Dependency',
+                module.package.dependencies,
+                this.dependencies[environment][module.name],
                 module.name
             );
 
-            this._checkDependencies(
-                'Peer dependency', module.package.peerDependencies, this.peerDependencies[environment][module.name],
+            this._checkDependencies('Peer dependency',
+                module.package.peerDependencies,
+                this.peerDependencies[environment][module.name],
                 module.name
             );
         });
@@ -234,9 +239,9 @@ export class Validator {
 
             // Display warning
             if(!IsNil(moduleName)) {
-                Logger.warn(prefix + ' "' + name + '" for "' + moduleName + '" is not required');
+                Logger.warn(`${prefix} "${name}" for "${moduleName}" is not required`);
             } else {
-                Logger.warn(prefix + ' "' + name + '" is not required');
+                Logger.warn(`${prefix} "${name}" is not required`);
             }
         }
     }

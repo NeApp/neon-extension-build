@@ -10,8 +10,8 @@ export default class ValidatorPlugin {
     }
 
     apply(compiler) {
-        compiler.plugin("compilation", compilation => {
-            compilation.plugin("after-optimize-chunks", (chunks) => {
+        compiler.plugin('compilation', compilation => {
+            compilation.plugin('after-optimize-chunks', (chunks) => {
                 // Process named chunks
                 let count = 0;
 

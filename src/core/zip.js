@@ -12,7 +12,7 @@ export function createZip(options) {
     }, options || {});
 
     return new Promise((resolve, reject) => {
-        Glob(options.source + '/' + options.pattern, (err, files) => {
+        Glob(`${options.source}/${options.pattern}`, (err, files) => {
             if(err) {
                 reject(err);
                 return;
@@ -44,7 +44,7 @@ export function createZip(options) {
                 // Write zip to file stream
                 zip.outputStream.on('finish', () => resolve());
                 zip.outputStream.pipe(writeStream);
-            })
+            });
         });
     });
 }

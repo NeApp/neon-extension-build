@@ -15,19 +15,42 @@ import {Browsers, Environments} from '../constants';
 const Logger = Vorpal.logger;
 const Timer = new Time();
 
-export function create({name, description, required, optional}, handler = null, defaultOptions = {}) {
-    let task = createTask({name, required, optional}, handler);
+function getRepositoryColor(repository) {
+    if(repository.dirty) {
+        return Chalk.red;
+    }
 
-    // Create command
-    Vorpal.command(name, description)
-        .option('--build-dir <build-dir>', 'Build Directory [default: ./build]')
-        .option('--package-dir <package-dir>', 'Package Directory [default: ./]')
-        .option('--browser <browser>', 'Browser [default: all]', Object.keys(Browsers))
-        .option('--environment <environment>', 'Environment [default: development]', Object.keys(Environments))
-        .action(createRunner(task, defaultOptions));
+    if(repository.ahead > 0) {
+        return Chalk.yellow;
+    }
 
-    // Return task reference
-    return task;
+    return Chalk.green;
+}
+
+function createLogger(prefix, name) {
+    function log(target, message) {
+        target(`${prefix}(${Chalk.cyan(name)}) ${message}`);
+    }
+
+    return {
+        debug: log.bind(null, Logger.debug),
+        info: log.bind(null, Logger.info),
+        warn: log.bind(null, Logger.warn),
+        error: log.bind(null, Logger.error),
+        fatal: log.bind(null, Logger.fatal)
+    };
+}
+
+function getEnvironmentName(name) {
+    if(name === 'production') {
+        return Chalk.green(name);
+    }
+
+    return Chalk.yellow(name);
+}
+
+function createLoggerPrefix(browser, environment) {
+    return `[${getEnvironmentName(environment.name)}#${Chalk.cyan(PadEnd(browser.name, 7))}] `;
 }
 
 export function createTask({name, required = [], optional = []}, handler = null) {
@@ -62,7 +85,7 @@ export function createTask({name, required = [], optional = []}, handler = null)
 
                 // Ensure task has been started
                 if(IsNil(promise)) {
-                    Logger.info(prefix + 'Starting \'' + Chalk.cyan(name) + '\'...');
+                    Logger.info(`${prefix}Starting '${Chalk.cyan(name)}'...`);
 
                     // Start timer
                     Timer.start(name);
@@ -77,18 +100,20 @@ export function createTask({name, required = [], optional = []}, handler = null)
                     // Display task result
                     promise.then(() => {
                         Logger.info(
-                            prefix + 'Finished \'' + Chalk.cyan(name) + '\' after ' + Chalk.magenta(Timer.end(name))
+                            `${prefix}Finished '${Chalk.cyan(name)}' after ${Chalk.magenta(Timer.end(name))}`
                         );
                     }, (err) => {
                         if(options.required) {
                             Logger.error(
-                                prefix + 'Errored \'' + Chalk.cyan(name) + '\' after ' + Chalk.magenta(Timer.end(name)) +
-                                ': ' + (err.stack || err.message || err)
+                                `${prefix}Errored '${Chalk.cyan(name)}' after ${Chalk.magenta(Timer.end(name))}: ${
+                                    err.stack || err.message || err
+                                }`
                             );
                         } else {
                             Logger.info(
-                                prefix + 'Skipped \'' + Chalk.cyan(name) + '\' after ' + Chalk.magenta(Timer.end(name)) +
-                                ': ' + (err.stack || err.message || err)
+                                `${prefix}Skipped '${Chalk.cyan(name)}' after ${Chalk.magenta(Timer.end(name))}: ${
+                                    err.stack || err.message || err
+                                }`
                             );
                         }
 
@@ -100,7 +125,9 @@ export function createTask({name, required = [], optional = []}, handler = null)
                 return promise;
             }, (err) => {
                 Logger.error(
-                    prefix + 'Errored \'' + Chalk.cyan(name) + '\': ' + (err.stack || err.message || err)
+                    `${prefix}Errored '${Chalk.cyan(name)}': ${
+                        err.stack || err.message || err
+                    }`
                 );
 
                 return Promise.reject(err);
@@ -133,8 +160,7 @@ export function createRunner(task, defaultOptions) {
                     environment = Environment.resolve(options.environment, browser, options);
                 } catch(e) {
                     Logger.error(
-                        'Unable to resolve "' + options.environment + '" environment: ' +
-                        (e && e.message ? e.message : e)
+                        `Unable to resolve "${options.environment}" environment: ${e && e.message ? e.message : e}`
                     );
                     return Promise.resolve();
                 }
@@ -145,22 +171,22 @@ export function createRunner(task, defaultOptions) {
                 // Display loaded modules
                 ForEach(browser.modules, (module) => {
                     Logger.info(prefix + getRepositoryColor(module.repository)(
-                        'Loaded: ' + module.name + ' (' + module.version + ')'
+                        `Loaded: ${module.name} (${module.version})`
                     ));
                 });
 
                 // Display extension version
                 Logger.info(prefix + getRepositoryColor(browser.extension.repository)(
-                    'Version: ' + browser.version
+                    `Version: ${browser.version}`
                 ));
 
                 // Display extension version name
                 Logger.info(prefix + getRepositoryColor(browser.extension.repository)(
-                    'Version Name: ' + browser.versionName
+                    `Version Name: ${browser.versionName}`
                 ));
 
                 // Run task
-                return task(browser, environment)
+                return task(browser, environment);
             }))
         ).catch(() => {
             Process.exit(1);
@@ -168,40 +194,17 @@ export function createRunner(task, defaultOptions) {
     };
 }
 
-function createLogger(prefix, name) {
-    function log(target, message) {
-        target(prefix + '(' + Chalk.cyan(name) + ') ' + message);
-    }
+export function create({name, description, required, optional}, handler = null, defaultOptions = {}) {
+    let task = createTask({name, required, optional}, handler);
 
-    return {
-        debug:  log.bind(null, Logger.debug),
-        info:   log.bind(null, Logger.info),
-        warn:   log.bind(null, Logger.warn),
-        error:  log.bind(null, Logger.error),
-        fatal:  log.bind(null, Logger.fatal)
-    };
-}
+    // Create command
+    Vorpal.command(name, description)
+        .option('--build-dir <build-dir>', 'Build Directory [default: ./build]')
+        .option('--package-dir <package-dir>', 'Package Directory [default: ./]')
+        .option('--browser <browser>', 'Browser [default: all]', Object.keys(Browsers))
+        .option('--environment <environment>', 'Environment [default: development]', Object.keys(Environments))
+        .action(createRunner(task, defaultOptions));
 
-function getEnvironmentName(name) {
-    if(name === 'production') {
-        return Chalk.green(name);
-    }
-
-    return Chalk.yellow(name);
-}
-
-function getRepositoryColor(repository) {
-    if(repository.dirty) {
-        return Chalk.red;
-    }
-
-    if(repository.ahead > 0) {
-        return Chalk.yellow;
-    }
-
-    return Chalk.green;
-}
-
-function createLoggerPrefix(browser, environment) {
-    return '[' + getEnvironmentName(environment.name) + '#' + Chalk.cyan(PadEnd(browser.name, 7)) + '] ';
+    // Return task reference
+    return task;
 }

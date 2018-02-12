@@ -11,6 +11,16 @@ import Checksum from '../../core/checksum';
 import {Task} from '../../core/helpers';
 
 
+function writeState(browser, environment) {
+    return Promise.resolve()
+        .then(() => Filesystem.writeJson(Path.join(environment.buildPath, 'browser.json'), browser, {
+            spaces: 2
+        }))
+        .then(() => Filesystem.writeJson(Path.join(environment.buildPath, 'environment.json'), environment, {
+            spaces: 2
+        }));
+}
+
 export const Build = Task.create({
     name: 'build',
     description: 'Build extension.',
@@ -34,22 +44,12 @@ export const Build = Task.create({
         .then(() => writeState(browser, environment));
 });
 
-function writeState(browser, environment) {
-    return Promise.resolve()
-        .then(() => Filesystem.writeJson(Path.join(environment.buildPath, 'browser.json'), browser, {
-            spaces: 2
-        }))
-        .then(() => Filesystem.writeJson(Path.join(environment.buildPath, 'environment.json'), environment, {
-            spaces: 2
-        }));
-}
-
 // Import children
 Filesystem.readdirSync(__dirname).forEach(function(name) {
     try {
-        require('./' + name);
+        require(`./${name}`);
     } catch(e) {
-        console.warn('Unable to import "./' + name + '": ' + e);
+        console.warn(`Unable to import "./${name}": ${e}`);
     }
 });
 

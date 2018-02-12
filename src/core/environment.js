@@ -6,14 +6,6 @@ import Path from 'path';
 import Environments from './constants/environments';
 
 
-export function resolve(name, browser, options) {
-    if(!IsNil(Environments[name])) {
-        return resolveEnvironment(Environments[name], browser, options);
-    }
-
-    throw new Error('Invalid environment: "' + name + '"');
-}
-
 function resolveEnvironment(environment, browser, options) {
     let buildPath = Path.join(options['build-dir'], browser.name, environment.name);
 
@@ -31,6 +23,14 @@ function resolveEnvironment(environment, browser, options) {
             extracted: {}
         }
     });
+}
+
+export function resolve(name, browser, options) {
+    if(!IsNil(Environments[name])) {
+        return resolveEnvironment(Environments[name], browser, options);
+    }
+
+    throw new Error(`Invalid environment: "${name}"`);
 }
 
 export default {

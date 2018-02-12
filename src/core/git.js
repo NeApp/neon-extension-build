@@ -144,7 +144,7 @@ export class Git {
 
                 resolve(hash.trim());
             });
-        })
+        });
     }
 }
 

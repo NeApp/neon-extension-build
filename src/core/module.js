@@ -39,12 +39,65 @@ const ModuleType = {
     }
 };
 
+function readContributors(path) {
+    // Read contributors from file
+    return Filesystem.readJson(Path.join(path, 'contributors.json')).then((data) => {
+        if(!Array.isArray(data)) {
+            return Promise.reject(new Error(
+                'Expected contributors to be an array'
+            ));
+        }
+
+        return data;
+    }, () => ([]));
+}
+
+function parseModuleManifest(data) {
+    return Merge({
+        'title': data.name || null,
+        'icons': {},
+
+        'content_scripts': [],
+        'web_accessible_resources': [],
+
+        'origins': [],
+        'permissions': [],
+
+        'optional_origins': [],
+        'optional_permissions': [],
+
+        'webpack': {
+            'alias': [],
+            'babel': [],
+            'chunks': [],
+            'modules': []
+        }
+    }, data);
+}
+
+function readModuleManifest(path) {
+    // Read module manifest from file
+    return Filesystem.readJson(Path.join(path, 'module.json')).then((data) => {
+        if(!IsPlainObject(data)) {
+            return Promise.reject(new Error(
+                'Expected manifest to be a plain object'
+            ));
+        }
+
+        // Parse module manifest
+        return parseModuleManifest(data);
+    }, () => {
+        // Return default module manifest
+        return parseModuleManifest({});
+    });
+}
+
 export function resolve(packageDir, type, name) {
     let moduleType = ModuleType[type];
 
     if(IsNil(moduleType)) {
         return Promise.reject(new Error(
-            'Unknown module type: "' + type + '"'
+            `Unknown module type: "${type}"`
         ));
     }
 
@@ -53,7 +106,7 @@ export function resolve(packageDir, type, name) {
 
     if(key.length < 1) {
         return Promise.reject(new Error(
-            'Invalid module name: "' + name + '"'
+            `Invalid module name: "${name}"`
         ));
     }
 
@@ -122,59 +175,6 @@ export function resolveMany(packageDir, modules) {
     }, [])).then((modules) => {
         return KeyBy(modules, 'name');
     });
-}
-
-function readContributors(path) {
-    // Read contributors from file
-    return Filesystem.readJson(Path.join(path, 'contributors.json')).then((data) => {
-        if(!Array.isArray(data)) {
-            return Promise.reject(new Error(
-                'Expected contributors to be an array'
-            ));
-        }
-
-        return data;
-    }, () => ([]));
-}
-
-function readModuleManifest(path) {
-    // Read module manifest from file
-    return Filesystem.readJson(Path.join(path, 'module.json')).then((data) => {
-        if(!IsPlainObject(data)) {
-            return Promise.reject(new Error(
-                'Expected manifest to be a plain object'
-            ));
-        }
-
-        // Parse module manifest
-        return parseModuleManifest(data)
-    }, () => {
-        // Return default module manifest
-        return parseModuleManifest({});
-    });
-}
-
-function parseModuleManifest(data) {
-    return Merge({
-        title: data.name || null,
-        icons: {},
-
-        content_scripts: [],
-        web_accessible_resources: [],
-
-        origins: [],
-        permissions: [],
-
-        optional_origins: [],
-        optional_permissions: [],
-
-        webpack: {
-            alias: [],
-            babel: [],
-            chunks: [],
-            modules: [],
-        }
-    }, data);
 }
 
 export default {
