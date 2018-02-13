@@ -6,3 +6,4 @@ before_install:
 script:
 - git reset --hard
 - npm run test
+- npm run build
