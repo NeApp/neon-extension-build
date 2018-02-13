@@ -219,7 +219,7 @@ function buildModuleManifest(browser, environment, module) {
     // Content Scripts (if the browser doesn't support declarative content)
     if(!browser.supports.api['declarativeContent'] || !browser.supports.api['permissions']) {
         manifest['content_scripts'] = module.manifest['content_scripts'].map((contentScript) =>
-            createContentScript(browser, environment.outputPath, contentScript)
+            createContentScript(browser, environment, contentScript)
         );
     }
 
