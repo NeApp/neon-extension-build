@@ -39,14 +39,19 @@ const ModuleType = {
     }
 };
 
-function getModulePath(basePath, directory, name) {
+function getModulePath(basePath, name, type) {
     let path;
 
     // Find development module type directory
-    path = Path.join(basePath, directory, name);
+    path = Path.join(basePath, (type.directory || '') + name);
 
     if(Filesystem.existsSync(path)) {
         return path;
+    }
+
+    // Find browser package
+    if(type.name === 'package' && Filesystem.existsSync(basePath, 'extension.json')) {
+        return basePath;
     }
 
     // Find installed module
@@ -134,7 +139,7 @@ export function resolve(path, type, name) {
     let module = {
         key,
         type: moduleType.name,
-        path: getModulePath(path, moduleType.directory, name)
+        path: getModulePath(path, name, moduleType)
     };
 
     // Resolve module metadata
