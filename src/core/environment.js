@@ -6,8 +6,16 @@ import Path from 'path';
 import Environments from './constants/environments';
 
 
+function getBuildPath(environment, browser, options) {
+    if(browser.local) {
+        return Path.join(options['build-dir'], environment.name);
+    }
+
+    return Path.join(options['build-dir'], browser.name, environment.name);
+}
+
 function resolveEnvironment(environment, browser, options) {
-    let buildPath = Path.join(options['build-dir'], browser.name, environment.name);
+    let buildPath = getBuildPath(environment, browser, options);
 
     return Merge(CloneDeep(environment), {
         outputPath: Path.join(buildPath, 'unpacked'),

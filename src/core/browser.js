@@ -9,9 +9,12 @@ import Module from './module';
 import Version from './version';
 
 
-function getBrowserPath(basePath, browser) {
+function findBrowser(basePath, browser) {
     if(Filesystem.existsSync(Path.join(basePath, 'extension.json'))) {
-        return basePath;
+        return {
+            local: true,
+            path: basePath
+        };
     }
 
     // Find development package directory
@@ -30,15 +33,17 @@ function getBrowserPath(basePath, browser) {
         throw new Error(`Unable to find "${browser.name}" browser package`);
     }
 
-    return path;
+    return {
+        local: false,
+        path
+    };
 }
 
 function resolveBrowser(packageDir, browser) {
     return Promise.resolve(CloneDeep(browser))
         .then((browser) => ({
             ...browser,
-
-            path: getBrowserPath(packageDir, browser)
+            ...findBrowser(packageDir, browser)
         }))
         // Resolve extension
         .then((browser) => Extension.resolve(browser.path, browser.package).then((extension) => ({

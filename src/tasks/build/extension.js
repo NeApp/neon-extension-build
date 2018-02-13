@@ -14,7 +14,7 @@ import {Task} from '../../core/helpers';
 import {createConfiguration} from '../../webpack';
 
 
-function constructCompiler(browser, environment, buildPath) {
+function constructCompiler(browser, environment) {
     // Generate configuration
     let configuration;
 
@@ -29,7 +29,7 @@ function constructCompiler(browser, environment, buildPath) {
 
     // Save configuration
     Filesystem.writeFileSync(
-        Path.join(buildPath, 'webpack.config.js'),
+        Path.join(environment.buildPath, 'webpack.config.js'),
         Util.inspect(configuration, { depth: null }),
         'utf-8'
     );
@@ -50,9 +50,9 @@ function runCompiler(compiler) {
     });
 }
 
-function writeStats(buildDir, stats) {
+function writeStats(environment, stats) {
     return Filesystem.writeJson(
-        Path.join(buildDir, 'webpack.stats.json'),
+        Path.join(environment.buildPath, 'webpack.stats.json'),
         stats.toJson('verbose')
     );
 }
@@ -65,13 +65,11 @@ export const Extension = Task.create({
         Clean
     ]
 }, function(log, browser, environment) {
-    const buildPath = Path.join(environment.options['build-dir'], browser.name, environment.name);
-
     // Construct compiler
     let compiler;
 
     try {
-        compiler = constructCompiler(browser, environment, buildPath);
+        compiler = constructCompiler(browser, environment);
     } catch(e) {
         return Promise.reject(e);
     }
@@ -83,7 +81,7 @@ export const Extension = Task.create({
             log.info(stats.toString('normal'));
 
             // Write statistics to file
-            writeStats(buildPath, stats);
+            writeStats(environment, stats);
 
             // Exit if there is any errors
             if(stats.hasErrors()) {
