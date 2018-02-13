@@ -1,4 +1,5 @@
 import CloneDeep from 'lodash/cloneDeep';
+import Filesystem from 'fs-extra';
 import IsNil from 'lodash/isNil';
 import Path from 'path';
 
@@ -8,21 +9,45 @@ import Module from './module';
 import Version from './version';
 
 
+function getBrowserPath(basePath, browser) {
+    if(Filesystem.existsSync(Path.join(basePath, 'extension.json'))) {
+        return basePath;
+    }
+
+    // Find development package directory
+    let path = Path.join(basePath, 'Packages');
+
+    if(!Filesystem.existsSync(path)) {
+        throw new Error(
+            'Invalid package directory (expected development root directory, or browser package directory)'
+        );
+    }
+
+    // Find development package
+    path = Path.join(path, browser.package);
+
+    if(!Filesystem.existsSync(path)) {
+        throw new Error(`Unable to find "${browser.name}" browser package`);
+    }
+
+    return path;
+}
+
 function resolveBrowser(packageDir, browser) {
     return Promise.resolve(CloneDeep(browser))
         .then((browser) => ({
             ...browser,
 
-            path: Path.join(packageDir, 'Packages', browser.package)
+            path: getBrowserPath(packageDir, browser)
         }))
         // Resolve extension
-        .then((browser) => Extension.resolve(packageDir, browser.package).then((extension) => ({
+        .then((browser) => Extension.resolve(browser.path, browser.package).then((extension) => ({
             ...browser,
 
             extension
         })))
         // Resolve modules
-        .then((browser) => Module.resolveMany(packageDir, browser.extension.modules).then((modules) => ({
+        .then((browser) => Module.resolveMany(browser.path, browser.extension.modules).then((modules) => ({
             ...browser,
 
             modules

@@ -39,6 +39,26 @@ const ModuleType = {
     }
 };
 
+function getModulePath(basePath, directory, name) {
+    let path;
+
+    // Find development module type directory
+    path = Path.join(basePath, directory, name);
+
+    if(Filesystem.existsSync(path)) {
+        return path;
+    }
+
+    // Find installed module
+    path = Path.join(basePath, 'node_modules', name);
+
+    if(Filesystem.existsSync(path)) {
+        return path;
+    }
+
+    throw new Error(`Unable to find "${name}" module`);
+}
+
 function readContributors(path) {
     // Read contributors from file
     return Filesystem.readJson(Path.join(path, 'contributors.json')).then((data) => {
@@ -92,7 +112,7 @@ function readModuleManifest(path) {
     });
 }
 
-export function resolve(packageDir, type, name) {
+export function resolve(path, type, name) {
     let moduleType = ModuleType[type];
 
     if(IsNil(moduleType)) {
@@ -114,7 +134,7 @@ export function resolve(packageDir, type, name) {
     let module = {
         key,
         type: moduleType.name,
-        path: Path.join(packageDir, (moduleType.directory || '') + name)
+        path: getModulePath(path, moduleType.directory, name)
     };
 
     // Resolve module metadata
@@ -164,11 +184,11 @@ export function resolve(packageDir, type, name) {
         }));
 }
 
-export function resolveMany(packageDir, modules) {
+export function resolveMany(path, modules) {
     // Resolve each module
     return Promise.all(Reduce(modules, (promises, names, type) => {
         ForEach(names, (name) => {
-            promises.push(resolve(packageDir, type, name));
+            promises.push(resolve(path, type, name));
         });
 
         return promises;

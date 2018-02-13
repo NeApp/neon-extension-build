@@ -9,7 +9,7 @@ import Travis from './travis';
 import {readPackageDetails} from './package';
 
 
-function parseExtensionManifest(packageName, data) {
+function parseExtensionManifest(name, data) {
     return Merge({
         'title': data.name || null,
 
@@ -40,13 +40,13 @@ function parseExtensionManifest(packageName, data) {
             ],
 
             'packages': [
-                packageName
+                name
             ]
         }
     });
 }
 
-function readExtensionManifest(packageName, path) {
+function readExtensionManifest(path, name) {
     // Read extension manifest from file
     return Filesystem.readJson(Path.join(path, 'extension.json')).then((data) => {
         if(!IsPlainObject(data)) {
@@ -56,26 +56,24 @@ function readExtensionManifest(packageName, path) {
         }
 
         // Parse extension manifest
-        return parseExtensionManifest(packageName, data);
+        return parseExtensionManifest(name, data);
     }, () => {
         // Return default extension manifest
-        return parseExtensionManifest(packageName, {});
+        return parseExtensionManifest(name, {});
     });
 }
 
-export function resolve(packageDir, packageName) {
-    let packagePath = Path.join(packageDir, 'Packages', packageName);
-
+export function resolve(path, name) {
     return Promise.resolve({})
         // Resolve package details
-        .then((extension) => readPackageDetails(packagePath).then((pkg) => ({
+        .then((extension) => readPackageDetails(path).then((pkg) => ({
             ...extension,
             ...pkg,
 
             package: pkg
         })))
         // Resolve repository status
-        .then((extension) => Git.status(packagePath, extension.package.version).catch(() => ({
+        .then((extension) => Git.status(path, extension.package.version).catch(() => ({
             ahead: 0,
             dirty: false,
 
@@ -110,7 +108,7 @@ export function resolve(packageDir, packageName) {
             travis
         })))
         // Resolve extension manifest
-        .then((extension) => readExtensionManifest(packageName, packagePath).then((manifest) => ({
+        .then((extension) => readExtensionManifest(path, name).then((manifest) => ({
             ...extension,
             ...manifest,
 
