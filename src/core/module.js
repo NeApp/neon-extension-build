@@ -9,6 +9,7 @@ import Pick from 'lodash/pick';
 import Reduce from 'lodash/reduce';
 
 import Git from './git';
+import Travis from './travis';
 import Version from './version';
 import {readPackageDetails} from './package';
 
@@ -168,6 +169,20 @@ export function resolve(path, type, name) {
             ]),
 
             repository
+        })))
+        // Resolve travis status (for package modules)
+        .then((module) => Promise.resolve(module.type === 'package' && Travis.status()).then((travis) => ({
+            ...module,
+
+            // Override attributes
+            ...Pick(travis, [
+                'branch',
+                'commit',
+                'tag'
+            ]),
+
+            // Include travis status
+            travis
         })))
         // Resolve contributors
         .then((module) => readContributors(module.path).then((contributors) => ({
