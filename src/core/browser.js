@@ -52,7 +52,7 @@ function resolveBrowser(packageDir, browser) {
             extension
         })))
         // Resolve modules
-        .then((browser) => Module.resolveMany(browser.path, browser.extension.modules).then((modules) => ({
+        .then((browser) => Module.resolveMany(packageDir, browser.extension.modules).then((modules) => ({
             ...browser,
 
             modules
