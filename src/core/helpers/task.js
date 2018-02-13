@@ -98,7 +98,7 @@ export function createTask({name, required = [], optional = []}, handler = null)
                     ));
 
                     // Display task result
-                    promise.then(() => {
+                    promise = promise.then(() => {
                         Logger.info(
                             `${prefix}Finished '${Chalk.cyan(name)}' after ${Chalk.magenta(Timer.end(name))}`
                         );
