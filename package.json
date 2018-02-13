@@ -3,7 +3,6 @@
   "version": "1.7.0-beta.3",
   "dependencies": {
     "@babel/core": "7.0.0-beta.32",
-    "@babel/node": "7.0.0-beta.32",
     "@babel/plugin-proposal-class-properties": "7.0.0-beta.32",
     "@babel/plugin-proposal-object-rest-spread": "7.0.0-beta.32",
     "@babel/polyfill": "7.0.0-beta.32",
@@ -41,10 +40,15 @@
     "whatwg-fetch": "2.0.3",
     "yazl": "^2.4.2"
   },
+  "devDependencies": {
+    "@babel/cli": "7.0.0-beta.32"
+  },
   "bin": {
-    "neb": "./src/index.js"
+    "neb": "./lib/index.js"
   },
   "scripts": {
+    "build": "babel src --out-dir lib",
+    "prepublish": "npm run build",
     "start": "babel-node src/index.js",
     "test": "eslint src/"
   }
