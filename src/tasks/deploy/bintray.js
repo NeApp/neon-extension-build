@@ -46,7 +46,7 @@ function createDescriptor(browser) {
             },
             {
                 'includePattern': 'build/production/(MD5SUMS|webpack.*)',
-                'uploadPattern': `Neon-${browser.versionName}/$1`
+                'uploadPattern': `Neon-${browser.title}-${browser.versionName}/$1`
             }
         ],
 
