@@ -30,13 +30,18 @@ export class Travis {
             return {};
         }
 
-        return {
-            branch: this.branch,
+        let result = {
             commit: this.commit,
             tag: this.tag,
 
             number: this.number
         };
+
+        if(this.branch !== this.tag) {
+            result.branch = this.branch;
+        }
+
+        return result;
     }
 }
 

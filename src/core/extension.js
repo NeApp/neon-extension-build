@@ -79,7 +79,9 @@ export function resolve(path, name) {
 
             branch: null,
             commit: null,
-            tag: null
+
+            tag: null,
+            latestTag: null
         })).then((repository) => ({
             ...extension,
 
@@ -87,7 +89,9 @@ export function resolve(path, name) {
             ...Pick(repository, [
                 'branch',
                 'commit',
-                'tag'
+
+                'tag',
+                'latestTag'
             ]),
 
             // Include repository status

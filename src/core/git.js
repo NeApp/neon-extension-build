@@ -46,15 +46,22 @@ export class Git {
 
         // Retrieve repository status
         return Promise.resolve()
-            // Retrieve latest version
-            .then(() => this._getCurrentTag(repository).then((tag) => ({
+            // Retrieve current version
+            .then(() => this._getTag(repository).then((tag) => ({
                 tag: tag
             }), () => ({
                 tag: null
             })))
 
+            // Retrieve latest version
+            .then(() => this._getTag(repository, false).then((tag) => ({
+                latestTag: tag
+            }), () => ({
+                latestTag: null
+            })))
+
             // Retrieve commits since latest version
-            .then((result) => this._getCommits(repository, result.tag).then((commits) => ({
+            .then((result) => this._getCommits(repository, result.latestTag).then((commits) => ({
                 ...result,
 
                 ahead: commits.total
@@ -102,15 +109,20 @@ export class Git {
         });
     }
 
-    _getCurrentTag(repository) {
+    _getTag(repository, exact = true) {
         return new Promise((resolve, reject) => {
-            repository.raw([
+            let args = [
                 'describe',
-                '--exact-match',
                 '--abbrev=0',
                 '--match=v*',
                 '--tags'
-            ], (err, description) => {
+            ];
+
+            if(exact) {
+                args.push('--exact-match');
+            }
+
+            repository.raw(args, (err, description) => {
                 if(err) {
                     reject(err);
                     return;

@@ -19,9 +19,9 @@ function isDirty({extension, modules}) {
     return false;
 }
 
-function generateVersionName({commit, branch, version, repository}, dirty = false) {
+function generateVersionName({commit, branch, tag, version, repository}, dirty = false) {
     // Append repository identifier
-    if(repository.ahead > 0) {
+    if(IsNil(tag)) {
         if(branch === 'master') {
             version += '-pre';
         } else {
