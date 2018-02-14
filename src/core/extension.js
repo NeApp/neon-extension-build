@@ -151,10 +151,10 @@ export function resolve(path, name) {
             travis
         })))
         // Resolve build channel
-        .then((result) => ({
-            ...result,
+        .then((extension) => ({
+            ...extension,
 
-            channel: getBuildChannel(result)
+            channel: getBuildChannel(extension)
         }))
         // Resolve extension manifest
         .then((extension) => readExtensionManifest(extension, path).then((manifest) => ({
@@ -171,6 +171,7 @@ export function resolve(path, name) {
             Logger.info(` - ${Chalk.cyan('Current Tag')}: ${extension.tag}`);
             Logger.info(` - ${Chalk.cyan('Latest Tag')}: ${extension.latestTag}`);
             Logger.info(` - ${Chalk.cyan('Channel')}: ${extension.channel}`);
+
             return extension;
         });
 }
