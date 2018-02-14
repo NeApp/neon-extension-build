@@ -1,3 +1,4 @@
+import Chalk from 'chalk';
 import CloneDeep from 'lodash/cloneDeep';
 import IsNil from 'lodash/isNil';
 import IsPlainObject from 'lodash/isPlainObject';
@@ -8,8 +9,11 @@ import Pick from 'lodash/pick';
 import Git from './git';
 import Json from './json';
 import Travis from './travis';
+import Vorpal from './vorpal';
 import {readPackageDetails} from './package';
 
+
+const Logger = Vorpal.logger;
 
 function getBuildChannel({dirty, tag}) {
     if(dirty || IsNil(tag)) {
@@ -158,7 +162,17 @@ export function resolve(path, name) {
             ...manifest,
 
             manifest
-        })));
+        })))
+        // Display extension details
+        .then((extension) => {
+            Logger.info(`${Chalk.green(extension.name)}:`);
+            Logger.info(` - ${Chalk.cyan('Branch')}: ${extension.branch}`);
+            Logger.info(` - ${Chalk.cyan('Commit:')} ${extension.commit}`);
+            Logger.info(` - ${Chalk.cyan('Current Tag')}: ${extension.tag}`);
+            Logger.info(` - ${Chalk.cyan('Latest Tag')}: ${extension.latestTag}`);
+            Logger.info(` - ${Chalk.cyan('Channel')}: ${extension.channel}`);
+            return extension;
+        });
 }
 
 export default {
