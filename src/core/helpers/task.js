@@ -15,7 +15,19 @@ import {Browsers, Environments} from '../constants';
 const Logger = Vorpal.logger;
 const Timer = new Time();
 
-function getRepositoryColor(repository) {
+function getBrowserColour({dirty, extension}) {
+    if(dirty) {
+        return Chalk.red;
+    }
+
+    if(extension.repository.ahead > 0) {
+        return Chalk.yellow;
+    }
+
+    return Chalk.green;
+}
+
+function getModuleColour({repository}) {
     if(repository.dirty) {
         return Chalk.red;
     }
@@ -173,18 +185,18 @@ export function createRunner(task, defaultOptions) {
 
                 // Display loaded modules
                 ForEach(browser.modules, (module) => {
-                    Logger.info(prefix + getRepositoryColor(module.repository)(
+                    Logger.info(prefix + getModuleColour(module)(
                         `Loaded: ${module.name} (${module.version})`
                     ));
                 });
 
                 // Display extension version
-                Logger.info(prefix + getRepositoryColor(browser.extension.repository)(
+                Logger.info(prefix + getBrowserColour(browser)(
                     `Version: ${browser.version}`
                 ));
 
                 // Display extension version name
-                Logger.info(prefix + getRepositoryColor(browser.extension.repository)(
+                Logger.info(prefix + getBrowserColour(browser)(
                     `Version Name: ${browser.versionName}`
                 ));
 
