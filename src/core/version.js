@@ -22,6 +22,10 @@ function isDirty({extension, modules}) {
 function generateVersionName({commit, branch, tag, version, repository}, dirty = false) {
     // Append repository identifier
     if(IsNil(tag)) {
+        if(IsNil(branch)) {
+            throw new Error('No branch or tag defined');
+        }
+
         if(branch === 'master') {
             version += '-pre';
         } else {
