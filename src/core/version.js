@@ -21,11 +21,7 @@ function isDirty({extension, modules}) {
 
 function generateVersionName({commit, branch, tag, version, repository}, dirty = false) {
     // Append repository identifier
-    if(IsNil(tag)) {
-        if(IsNil(branch)) {
-            throw new Error('No branch or tag defined');
-        }
-
+    if(IsNil(tag) && !IsNil(branch)) {
         if(branch === 'master') {
             version += '-pre';
         } else {
@@ -74,8 +70,10 @@ export function resolve(module) {
 }
 
 export function resolveBrowser(browser) {
-    if(!IsNil(module.tag) && module.tag.indexOf(`v${module.version}`) !== 0) {
-        throw new Error(`Tag "${module.tag}" should match the package version "${module.version}"`);
+    if(!IsNil(browser.extension.tag) && browser.extension.tag.indexOf(`v${browser.extension.version}`) !== 0) {
+        throw new Error(
+            `Tag "${browser.extension.tag}" should match the package version "${browser.extension.version}"`
+        );
     }
 
     let dirty = isDirty(browser);
