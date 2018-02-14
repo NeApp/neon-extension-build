@@ -106,16 +106,16 @@ function installModule(name, branch, {cwd}) {
                         // Log message
                         if(line.indexOf('requires a peer of') >= 0) {
                             // Peer dependency message
-                            Vorpal.logger.debug(`[NeApp/${name}#${branch}] ${line}`)
+                            Vorpal.logger.debug(`[NeApp/${name}#${branch}] ${line}`);
                         } else if(line.endsWith('loglevel="notice"')) {
                             // Notice
-                            Vorpal.logger.debug(`[NeApp/${name}#${branch}] ${line}`)
+                            Vorpal.logger.debug(`[NeApp/${name}#${branch}] ${line}`);
                         } else if(type === 'error') {
                             // Error
-                            Vorpal.logger.error(`[NeApp/${name}#${branch}] ${line}`)
+                            Vorpal.logger.error(`[NeApp/${name}#${branch}] ${line}`);
                         } else if(type === 'warn') {
                             // Warning
-                            Vorpal.logger.warn(`[NeApp/${name}#${branch}] ${line}`)
+                            Vorpal.logger.warn(`[NeApp/${name}#${branch}] ${line}`);
                         } else {
                             // Unknown level
                             Vorpal.logger.info(`[NeApp/${name}#${branch}] ${line}`);
@@ -124,7 +124,9 @@ function installModule(name, branch, {cwd}) {
                 }
 
                 if(!IsNil(stdout)) {
-                    ForEach(stdout.trim().split('\n'), (line) => Vorpal.logger.info(`[NeApp/${name}#${branch}] ${line}`));
+                    ForEach(stdout.trim().split('\n'), (line) =>
+                        Vorpal.logger.info(`[NeApp/${name}#${branch}] ${line}`)
+                    );
                 }
             }, (err) => {
                 Vorpal.logger.warn(`[NeApp/${name}#${branch}] Exited with return code: ${err.code}`);
