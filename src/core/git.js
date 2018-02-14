@@ -45,21 +45,23 @@ export class Git {
         let repository = SimpleGit(path).silent(true);
 
         // Retrieve repository status
-        return Promise.resolve()
+        return Promise.resolve({})
             // Retrieve current version
-            .then(() => this._getTag(repository).then((tag) => ({
-                tag: tag
+            .then((result) => this._getTag(repository).then((tag) => ({
+                ...result,
+
+                tag: tag || null
             }), () => ({
                 tag: null
             })))
-
             // Retrieve latest version
-            .then(() => this._getTag(repository, false).then((tag) => ({
-                latestTag: tag
+            .then((result) => this._getTag(repository, false).then((tag) => ({
+                ...result,
+
+                latestTag: tag || null
             }), () => ({
                 latestTag: null
             })))
-
             // Retrieve commits since latest version
             .then((result) => this._getCommits(repository, result.latestTag).then((commits) => ({
                 ...result,
@@ -70,7 +72,6 @@ export class Git {
 
                 ahead: 0
             })))
-
             // Retrieve latest commit hash
             .then((result) => this._resolveHash(repository).then((commit) => ({
                 ...result,
@@ -81,7 +82,6 @@ export class Git {
 
                 commit: null
             })))
-
             // Retrieve status
             .then((result) => this._getStatus(repository).then((status) => ({
                 ...result,

@@ -1,13 +1,27 @@
-import Filesystem from 'fs-extra';
+import CloneDeep from 'lodash/cloneDeep';
+import IsNil from 'lodash/isNil';
 import IsPlainObject from 'lodash/isPlainObject';
 import Merge from 'lodash/merge';
 import Path from 'path';
 import Pick from 'lodash/pick';
 
 import Git from './git';
+import Json from './json';
 import Travis from './travis';
 import {readPackageDetails} from './package';
 
+
+function getBuildChannel({dirty, tag}) {
+    if(dirty || IsNil(tag)) {
+        return 'develop';
+    }
+
+    if(tag.indexOf('beta') >= 0) {
+        return 'beta';
+    }
+
+    return 'stable';
+}
 
 function parseExtensionManifest(name, data) {
     return Merge({
@@ -24,10 +38,10 @@ function parseExtensionManifest(name, data) {
             'sources': []
         }
     }, {
-        ...data,
+        ...CloneDeep(data),
 
         'modules': {
-            ...data.modules,
+            ...CloneDeep(data.modules),
 
             'core': [
                 'neon-extension-core',
@@ -46,32 +60,53 @@ function parseExtensionManifest(name, data) {
     });
 }
 
-function readExtensionManifest(path, name) {
-    // Read extension manifest from file
-    return Filesystem.readJson(Path.join(path, 'extension.json')).then((data) => {
-        if(!IsPlainObject(data)) {
-            return Promise.reject(new Error(
-                'Expected manifest to be a plain object'
-            ));
-        }
-
+function readExtensionManifest(extension, path) {
+    return Promise.resolve({})
+        // Read extension manifest
+        .then((manifest) =>
+            Json.read(Path.join(path, 'extension.json'), {}).then((data) => ({
+                ...manifest,
+                ...data
+            }))
+        )
+        // Overlay with channel manifest
+        .then((manifest) =>
+            Json.read(Path.join(path, `extension.${extension.channel}.json`), {}).then((data) => ({
+                ...manifest,
+                ...data
+            }))
+        )
         // Parse extension manifest
-        return parseExtensionManifest(name, data);
-    }, () => {
-        // Return default extension manifest
-        return parseExtensionManifest(name, {});
-    });
+        .then((manifest) => {
+            if(!IsPlainObject(manifest)) {
+                return Promise.reject(new Error(
+                    'Expected manifest to be a plain object'
+                ));
+            }
+
+            return parseExtensionManifest(extension.name, manifest);
+        }, () => {
+            return parseExtensionManifest(extension.name, {});
+        });
 }
 
 export function resolve(path, name) {
     return Promise.resolve({})
         // Resolve package details
-        .then((extension) => readPackageDetails(path).then((pkg) => ({
-            ...extension,
-            ...pkg,
+        .then((extension) => readPackageDetails(path).then((pkg) => {
+            if(pkg.name !== name) {
+                return Promise.reject(new Error(
+                    `Invalid package: ${pkg.name} (expected: ${name})`
+                ));
+            }
 
-            package: pkg
-        })))
+            return {
+                ...extension,
+                ...pkg,
+
+                package: pkg
+            };
+        }))
         // Resolve repository status
         .then((extension) => Git.status(path, extension.package.version).catch(() => ({
             ahead: 0,
@@ -111,8 +146,14 @@ export function resolve(path, name) {
             // Include travis status
             travis
         })))
+        // Resolve build channel
+        .then((result) => ({
+            ...result,
+
+            channel: getBuildChannel(result)
+        }))
         // Resolve extension manifest
-        .then((extension) => readExtensionManifest(path, name).then((manifest) => ({
+        .then((extension) => readExtensionManifest(extension, path).then((manifest) => ({
             ...extension,
             ...manifest,
 

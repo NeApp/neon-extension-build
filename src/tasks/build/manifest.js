@@ -30,13 +30,13 @@ function getExtensionManifest(browser) {
     return {
         'manifest_version': 2,
 
-        'applications': null,
-
         'name': browser.extension.title,
         'version': browser.version,
         'version_name': null,
 
         'description': null,
+
+        'applications': null,
         'icons': {},
 
         'permissions': permissions,
