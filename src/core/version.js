@@ -1,24 +1,6 @@
 import IsNil from 'lodash/isNil';
 
 
-function isDirty({extension, modules}) {
-    if(extension.repository.dirty) {
-        return true;
-    }
-
-    for(let name in modules) {
-        if(!modules.hasOwnProperty(name)) {
-            continue;
-        }
-
-        if(modules[name].repository.dirty) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 function generateVersionName({commit, branch, tag, version, repository}, dirty = false) {
     // Append repository identifier
     if(IsNil(tag) && !IsNil(branch)) {
@@ -76,13 +58,15 @@ export function resolveBrowser(browser) {
         );
     }
 
-    let dirty = isDirty(browser);
-
     return {
-        version: generateVersion(browser.extension),
-        versionName: generateVersionName(browser.extension, dirty),
+        version: generateVersion(
+            browser.extension
+        ),
 
-        dirty
+        versionName: generateVersionName(
+            browser.extension,
+            browser.extension.dirty
+        )
     };
 }
 

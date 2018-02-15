@@ -3,17 +3,34 @@ import CloneDeep from 'lodash/cloneDeep';
 import IsNil from 'lodash/isNil';
 import IsPlainObject from 'lodash/isPlainObject';
 import Merge from 'lodash/merge';
+import Omit from 'lodash/omit';
 import Path from 'path';
 import Pick from 'lodash/pick';
 
 import Git from './git';
 import Json from './json';
+import Module from './module';
 import Travis from './travis';
 import Vorpal from './vorpal';
 import {readPackageDetails} from './package';
 
 
 const Logger = Vorpal.logger;
+
+const BaseManifest = {
+    'title': null,
+
+    'origins': [],
+    'permissions': [],
+
+    'optional_origins': [],
+    'optional_permissions': [],
+
+    'modules': {
+        'destinations': [],
+        'sources': []
+    }
+};
 
 function getBuildChannel({dirty, tag}) {
     if(dirty || IsNil(tag)) {
@@ -27,21 +44,26 @@ function getBuildChannel({dirty, tag}) {
     return 'stable';
 }
 
-function parseExtensionManifest(name, data) {
-    return Merge({
-        'title': data.name || null,
+function isDirty({repository, modules}) {
+    if(repository.dirty) {
+        return true;
+    }
 
-        'origins': [],
-        'permissions': [],
-
-        'optional_origins': [],
-        'optional_permissions': [],
-
-        'modules': {
-            'destinations': [],
-            'sources': []
+    for(let name in modules) {
+        if(!modules.hasOwnProperty(name)) {
+            continue;
         }
-    }, {
+
+        if(modules[name].repository.dirty) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function parseManifest(name, data) {
+    return Merge(CloneDeep(BaseManifest), {
         ...CloneDeep(data),
 
         'modules': {
@@ -64,37 +86,50 @@ function parseExtensionManifest(name, data) {
     });
 }
 
-function readExtensionManifest(extension, path) {
-    return Promise.resolve({})
-        // Read extension manifest
-        .then((manifest) =>
-            Json.read(Path.join(path, 'extension.json'), {}).then((data) => ({
-                ...manifest,
-                ...data
-            }))
-        )
-        // Overlay with channel manifest
-        .then((manifest) =>
-            Json.read(Path.join(path, `extension.${extension.channel}.json`), {}).then((data) => ({
-                ...manifest,
-                ...data
-            }))
-        )
-        // Parse extension manifest
-        .then((manifest) => {
-            if(!IsPlainObject(manifest)) {
-                return Promise.reject(new Error(
-                    'Expected manifest to be a plain object'
-                ));
-            }
+function readManifest(extension, path, channel = null) {
+    let name = 'extension.json';
 
-            return parseExtensionManifest(extension.name, manifest);
-        }, () => {
-            return parseExtensionManifest(extension.name, {});
-        });
+    if(!IsNil(channel)) {
+        name = `extension.${channel}.json`;
+    }
+
+    // Read manifest from file
+    return Json.read(Path.join(path, name), {}).then((manifest) => {
+        if(!IsPlainObject(manifest)) {
+            return Promise.reject(new Error(
+                'Expected manifest to be a plain object'
+            ));
+        }
+
+        return manifest;
+    }, () => (
+        {}
+    ));
 }
 
-export function resolve(path, name) {
+function getManifest(extension, path) {
+    return readManifest(extension, path).then(
+        (manifest) => parseManifest(extension.name, manifest),
+        () => parseManifest(extension.name, {})
+    );
+}
+
+function overlayManifest(extension, path) {
+    return readManifest(extension, path, extension.channel).then((manifest) => {
+        if(!IsNil(manifest.modules)) {
+            return Promise.reject(new Error(
+                '"modules" in manifest overlays are not permitted'
+            ));
+        }
+
+        return {
+            ...extension.manifest,
+            ...manifest
+        };
+    });
+}
+
+export function resolve(packageDir, path, name) {
     return Promise.resolve({})
         // Resolve package details
         .then((extension) => readPackageDetails(path).then((pkg) => {
@@ -150,27 +185,50 @@ export function resolve(path, name) {
             // Include travis status
             travis
         })))
+        // Resolve extension manifest
+        .then((extension) => getManifest(extension, path).then((manifest) => ({
+            ...extension,
+            ...manifest,
+
+            manifest
+        })))
+        // Resolve modules
+        .then((extension) => Module.resolveMany(packageDir, extension.modules).then((modules) => ({
+            ...extension,
+
+            modules
+        })))
+        // Resolve extension "dirty" state
+        .then((extension) => ({
+            ...extension,
+
+            dirty: isDirty(extension)
+        }))
         // Resolve build channel
         .then((extension) => ({
             ...extension,
 
             channel: getBuildChannel(extension)
         }))
-        // Resolve extension manifest
-        .then((extension) => readExtensionManifest(extension, path).then((manifest) => ({
+        // Resolve extension manifest overlay
+        .then((extension) => overlayManifest(extension, path).then((manifest) => ({
             ...extension,
-            ...manifest,
+
+            ...Omit(manifest, [
+                'modules'
+            ]),
 
             manifest
         })))
         // Display extension details
         .then((extension) => {
-            Logger.info(`${Chalk.green(extension.name)}:`);
+            Logger.info(`"${Chalk.green(extension.manifest.title)}" [${Chalk.green(extension.name)}]`);
             Logger.info(` - ${Chalk.cyan('Branch')}: ${extension.branch}`);
-            Logger.info(` - ${Chalk.cyan('Commit:')} ${extension.commit}`);
-            Logger.info(` - ${Chalk.cyan('Current Tag')}: ${extension.tag}`);
-            Logger.info(` - ${Chalk.cyan('Latest Tag')}: ${extension.latestTag}`);
             Logger.info(` - ${Chalk.cyan('Channel')}: ${extension.channel}`);
+            Logger.info(` - ${Chalk.cyan('Commit:')} ${extension.commit}`);
+            Logger.info(` - ${Chalk.cyan('Dirty')}: ${extension.dirty}`);
+            Logger.info(` - ${Chalk.cyan('Tag / Current')}: ${extension.tag}`);
+            Logger.info(` - ${Chalk.cyan('Tag / Latest')}: ${extension.latestTag}`);
 
             return extension;
         });

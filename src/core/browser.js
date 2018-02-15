@@ -46,16 +46,11 @@ function resolveBrowser(packageDir, browser) {
             ...findBrowser(packageDir, browser)
         }))
         // Resolve extension
-        .then((browser) => Extension.resolve(browser.path, browser.package).then((extension) => ({
+        .then((browser) => Extension.resolve(packageDir, browser.path, browser.package).then((extension) => ({
             ...browser,
 
+            modules: extension.modules,
             extension
-        })))
-        // Resolve modules
-        .then((browser) => Module.resolveMany(packageDir, browser.extension.modules).then((modules) => ({
-            ...browser,
-
-            modules
         })))
         // Retrieve supported browser features
         .then((browser) => ({
