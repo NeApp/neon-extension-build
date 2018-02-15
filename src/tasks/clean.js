@@ -21,7 +21,9 @@ export const Clean = Task.create({
 
     return Delete([
         Path.join(path, '**/*')
-    ]).then(() => {
+    ], {
+        force: true
+    }).then(() => {
         log.debug('Done');
     });
 });
