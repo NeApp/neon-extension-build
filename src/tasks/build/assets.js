@@ -1,49 +1,16 @@
 import Chalk from 'chalk';
-import Filesystem from 'fs';
-import Glob from 'glob';
+import Filesystem from 'fs-extra';
 import Map from 'lodash/map';
 import Mkdirp from 'mkdirp';
 import PadEnd from 'lodash/padEnd';
 import Path from 'path';
 
 import Clean from '../clean';
+import Copy from '../../core/copy';
 import {Task} from '../../core/helpers';
 
 
 const Pattern = '**/*.{css,eot,html,js,png,svg,ttf,woff}';
-
-function copyFile(sourcePath, outputPath) {
-    return new Promise((resolve, reject) => {
-        // Ensure output directory exists
-        Mkdirp.sync(Path.dirname(outputPath));
-
-        // Copy file to output path
-        Filesystem.createReadStream(sourcePath).pipe(
-            Filesystem.createWriteStream(outputPath)
-                .on('error', (err) => reject(err))
-                .on('finish', () => resolve(outputPath))
-        );
-    });
-}
-
-function copy(basePath, outputPath) {
-    return new Promise((resolve, reject) => {
-        Glob(`${basePath}/${Pattern}`, (err, files) => {
-            if(err) {
-                reject(err);
-                return;
-            }
-
-            // Copy matched files to output directory
-            let promises = files.map((filePath) =>
-                copyFile(filePath, Path.join(outputPath, Path.relative(basePath, filePath)))
-            );
-
-            // Wait until all files have been copied
-            resolve(Promise.all(promises));
-        });
-    });
-}
 
 export const Assets = Task.create({
     name: 'build:assets',
@@ -58,24 +25,24 @@ export const Assets = Task.create({
 
     // Copy assets to build directory
     return Promise.all(Map(browser.modules, (module) => {
-        let destinationPath = environment.outputPath;
-        let sourcePath = Path.join(module.path, 'assets');
+        let src = Path.join(module.path, 'assets');
+        let dest = environment.outputPath;
 
         // Ensure source path exists
-        if(!Filesystem.existsSync(sourcePath)) {
+        if(!Filesystem.existsSync(src)) {
             return Promise.resolve();
         }
 
         // Add module name suffix to output directory
         if(['destination', 'source'].indexOf(module.type) >= 0) {
-            destinationPath = Path.join(
-                destinationPath,
+            dest = Path.join(
+                dest,
                 module.name.replace('neon-extension-', '').replace('-', Path.sep)
             );
         }
 
         // Copy module assets to build directory
-        return copy(sourcePath, destinationPath).then((files) => {
+        return Copy(Pattern, src, dest).then((files) => {
             log.info(Chalk.green(
                 `[${PadEnd(module.name, 35)}] Copied ${files.length} asset(s)`
             ));
