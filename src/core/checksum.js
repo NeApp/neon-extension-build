@@ -32,7 +32,7 @@ export function calculateMany(base, source) {
                 }
 
                 // Calculate file checksum
-                let name = Path.relative(base, path);
+                let name = Path.relative(base, path).replace(/\\/g, '/');
                 let result = {};
 
                 return calculate(path).then((hash) => {
