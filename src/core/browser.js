@@ -5,7 +5,6 @@ import Path from 'path';
 
 import Browsers from './constants/browsers';
 import Extension from './extension';
-import Module from './module';
 import Version from './version';
 
 
