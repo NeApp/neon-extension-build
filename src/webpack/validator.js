@@ -197,6 +197,10 @@ export class Validator {
             throw new Error('Build didn\'t pass validation');
         }
 
+        if(IsNil(this.dependencies[environment]) || IsNil(this.peerDependencies[environment])) {
+            return;
+        }
+
         // Ensure there are no unused extension dependencies
         this._checkDependencies('Dependency',
             browser.extension.package.dependencies,
