@@ -1,10 +1,7 @@
 import Filesystem from 'fs-extra';
 import Path from 'path';
 
-import Archive from './archive';
-import Assets from '../build/assets';
-import Extension from '../build/extension';
-import Manifest from '../build/manifest';
+import Clean from '../clean';
 import {Task} from '../../core/helpers';
 
 
@@ -65,11 +62,7 @@ export const Bintray = Task.create({
     description: 'Create bintray descriptor for the built extension.',
 
     required: [
-        Assets,
-        Extension,
-        Manifest,
-
-        Archive
+        Clean
     ]
 }, (log, browser, environment) => {
     // Write bintray descriptor to file

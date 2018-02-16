@@ -18,6 +18,10 @@ function resolveEnvironment(environment, browser, options) {
     let buildPath = getBuildPath(environment, browser, options);
 
     return Merge(CloneDeep(environment), {
+        output: {
+            source: Path.join(buildPath, 'source')
+        },
+
         outputPath: Path.join(buildPath, 'unpacked'),
         buildPath,
 

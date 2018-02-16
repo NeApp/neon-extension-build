@@ -5,9 +5,10 @@ import Assets from './assets';
 import Credits from './credits';
 import Extension from './extension';
 import Manifest from './manifest';
-import Archive from '../deploy/archive';
 import Bintray from '../deploy/bintray';
 import Checksum from '../../core/checksum';
+import ReleaseArchiveTask from '../archive/release';
+import SourceArchiveTask from '../archive/source';
 import {Task} from '../../core/helpers';
 
 
@@ -31,7 +32,8 @@ export const Build = Task.create({
         Extension,
         Manifest,
 
-        Archive
+        ReleaseArchiveTask,
+        SourceArchiveTask
     ],
 
     optional: [

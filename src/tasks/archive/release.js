@@ -7,9 +7,9 @@ import {Task} from '../../core/helpers';
 import {createZip} from '../../core/zip';
 
 
-export const Archive = Task.create({
-    name: 'deploy:archive',
-    description: 'Create an archive of the built extension.',
+export const ReleaseArchiveTask = Task.create({
+    name: 'archive:release',
+    description: 'Create release archive of the built extension.',
 
     required: [
         Assets,
@@ -17,7 +17,6 @@ export const Archive = Task.create({
         Manifest
     ]
 }, (log, browser, environment) => {
-    // Create archive of build
     return createZip({
         archive: Path.join(environment.buildPath, `Neon-${browser.title}-${browser.versionName}.zip`),
 
@@ -26,4 +25,4 @@ export const Archive = Task.create({
     });
 });
 
-export default Archive;
+export default ReleaseArchiveTask;
