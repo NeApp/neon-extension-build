@@ -1,4 +1,5 @@
 import Path from 'path';
+import Pick from 'lodash/pick';
 
 import Clean from '../clean';
 import Copy from '../../core/copy';
@@ -9,16 +10,19 @@ import {createZip} from '../../core/zip';
 
 const Pattern = '{assets/**/*,*.json,*.md,.*}';
 
-function setPackageVersion(browser, environment) {
-    let path = Path.join(environment.output.source, 'package.json');
+function updateExtensionManifest(browser, environment) {
+    let path = Path.join(environment.output.source, 'extension.json');
 
-    // Read package details from `path`
+    // Read extension manifest from `path`
     return Json.read(path).then((pkg) =>
-        // Update package version, and write back to `path`
+        // Update extension manifest, and write back to `path`
         Json.write(path, {
             ...pkg,
 
-            version: browser.version
+            ...Pick(browser.extension, [
+                'repository',
+                'travis'
+            ])
         }, {
             spaces: 2
         })
@@ -35,8 +39,8 @@ export const SourceArchiveTask = Task.create({
 }, (log, browser, environment) => {
     // Copy browser sources to the build directory
     return Copy(Pattern, browser.path, environment.output.source)
-        // Set browser version
-        .then(() => setPackageVersion(browser, environment))
+        // Update extension manifest
+        .then(() => updateExtensionManifest(browser, environment))
         // Create an archive of browser sources
         .then(() => createZip({
             archive: Path.join(environment.buildPath, `Neon-${browser.title}-${browser.versionName}-sources.zip`),

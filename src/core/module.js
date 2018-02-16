@@ -4,12 +4,12 @@ import IsNil from 'lodash/isNil';
 import IsPlainObject from 'lodash/isPlainObject';
 import KeyBy from 'lodash/keyBy';
 import Merge from 'lodash/merge';
+import Omit from 'lodash/omit';
 import Path from 'path';
 import Pick from 'lodash/pick';
 import Reduce from 'lodash/reduce';
 
 import Git from './git';
-import Travis from './travis';
 import Version from './version';
 import {readPackageDetails} from './package';
 
@@ -118,7 +118,7 @@ function readModuleManifest(path) {
     });
 }
 
-export function resolve(path, type, name) {
+export function resolve(extension, path, type, name) {
     let moduleType = ModuleType[type];
 
     if(IsNil(moduleType)) {
@@ -147,43 +147,66 @@ export function resolve(path, type, name) {
     return Promise.resolve(module)
         .then((module) => readPackageDetails(module.path).then((pkg) => ({
             ...module,
-            ...pkg,
 
+            // Extension
+            ...Omit(pkg, [
+                'repository'
+            ]),
+
+            // Package
             package: pkg
         })))
         // Resolve repository status
-        .then((module) => Git.status(module.path, module.package.version).catch(() => ({
-            ahead: 0,
-            dirty: false,
+        .then((module) => Promise.resolve().then(() => {
+            if(module.type === 'package') {
+                return extension.repository;
+            }
 
-            branch: null,
-            commit: null,
-            tag: null
-        })).then((repository) => ({
+            return Git.status(module.path, module.package.version).catch(() => ({
+                ahead: 0,
+                dirty: false,
+
+                branch: null,
+                commit: null,
+
+                tag: null,
+                latestTag: null
+            }));
+        }).then((repository) => ({
             ...module,
 
+            // Module
             ...Pick(repository, [
                 'branch',
                 'commit',
-                'tag'
+
+                'tag',
+                'latestTag'
             ]),
 
+            // Repository
             repository
         })))
         // Resolve travis status (for package modules)
-        .then((module) => Promise.resolve(module.type === 'package' && Travis.status()).then((travis) => ({
-            ...module,
+        .then((module) => {
+            if(module.type !== 'package') {
+                return module;
+            }
 
-            // Override attributes
-            ...Pick(travis, [
-                'branch',
-                'commit',
-                'tag'
-            ]),
+            return {
+                ...module,
 
-            // Include travis status
-            travis
-        })))
+                // Module
+                ...Pick(extension.travis, [
+                    'branch',
+                    'commit',
+                    'tag'
+                ]),
+
+                // Travis
+                travis: extension.travis
+            };
+        })
         // Resolve contributors
         .then((module) => readContributors(module.path).then((contributors) => ({
             ...module,
@@ -204,11 +227,11 @@ export function resolve(path, type, name) {
         }));
 }
 
-export function resolveMany(path, modules) {
+export function resolveMany(path, extension) {
     // Resolve each module
-    return Promise.all(Reduce(modules, (promises, names, type) => {
+    return Promise.all(Reduce(extension.modules, (promises, names, type) => {
         ForEach(names, (name) => {
-            promises.push(resolve(path, type, name));
+            promises.push(resolve(extension, path, type, name));
         });
 
         return promises;

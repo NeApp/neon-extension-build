@@ -141,25 +141,43 @@ export function resolve(packageDir, path, name) {
 
             return {
                 ...extension,
-                ...pkg,
 
+                // Extension
+                ...Omit(pkg, [
+                    'repository'
+                ]),
+
+                // Package
                 package: pkg
             };
         }))
+        // Resolve extension manifest
+        .then((extension) => getManifest(extension, path).then((manifest) => ({
+            ...extension,
+            ...manifest,
+
+            manifest
+        })))
         // Resolve repository status
-        .then((extension) => Git.status(path, extension.package.version).catch(() => ({
-            ahead: 0,
-            dirty: false,
+        .then((extension) => Promise.resolve().then(() => {
+            if(!IsNil(extension.repository)) {
+                return extension.repository;
+            }
 
-            branch: null,
-            commit: null,
+            return Git.status(path, extension.package.version).catch(() => ({
+                ahead: 0,
+                dirty: false,
 
-            tag: null,
-            latestTag: null
-        })).then((repository) => ({
+                branch: null,
+                commit: null,
+
+                tag: null,
+                latestTag: null
+            }));
+        }).then((repository) => ({
             ...extension,
 
-            // Override attributes
+            // Extension
             ...Pick(repository, [
                 'branch',
                 'commit',
@@ -168,32 +186,31 @@ export function resolve(packageDir, path, name) {
                 'latestTag'
             ]),
 
-            // Include repository status
+            // Repository
             repository
         })))
         // Resolve travis status
-        .then((extension) => Promise.resolve(Travis.status()).then((travis) => ({
+        .then((extension) => Promise.resolve().then(() => {
+            if(!IsNil(extension.travis)) {
+                return extension.travis;
+            }
+
+            return Travis.status();
+        }).then((travis) => ({
             ...extension,
 
-            // Override attributes
+            // Extension
             ...Pick(travis, [
                 'branch',
                 'commit',
                 'tag'
             ]),
 
-            // Include travis status
+            // Travis
             travis
         })))
-        // Resolve extension manifest
-        .then((extension) => getManifest(extension, path).then((manifest) => ({
-            ...extension,
-            ...manifest,
-
-            manifest
-        })))
         // Resolve modules
-        .then((extension) => Module.resolveMany(packageDir, extension.modules).then((modules) => ({
+        .then((extension) => Module.resolveMany(packageDir, extension).then((modules) => ({
             ...extension,
 
             modules
@@ -214,10 +231,12 @@ export function resolve(packageDir, path, name) {
         .then((extension) => overlayManifest(extension, path).then((manifest) => ({
             ...extension,
 
+            // Extension
             ...Omit(manifest, [
                 'modules'
             ]),
 
+            // Manifest
             manifest
         })))
         // Display extension details
