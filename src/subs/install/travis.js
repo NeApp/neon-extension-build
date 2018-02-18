@@ -35,6 +35,30 @@ function exists(name, branch) {
     });
 }
 
+export function getBranches(current) {
+    let branches;
+
+    if(current.indexOf('v') === 0) {
+        branches = ['master'];
+    } else {
+        branches = ['develop', 'master'];
+    }
+
+    // Find existing position of `current`
+    let i = branches.indexOf(current);
+
+    if(i < 0) {
+        // Add current branch to front
+        branches.unshift(current);
+    } else if(i > 0) {
+        // Move current branch to front
+        branches.splice(i, 1);
+        branches.unshift(current);
+    }
+
+    return branches;
+}
+
 function getPackageModules(path) {
     return Filesystem.readJson(path).then((pkg) => {
         let match = /^neon-extension-(\w+)$/.exec(pkg.name);
@@ -72,19 +96,7 @@ function install(name, options) {
 }
 
 function installModule(name, branch, {cwd}) {
-    let branches = ['develop', 'master'];
-
-    // Insert specified branch at start
-    let i = branches.indexOf(branch);
-
-    if(i < 0) {
-        branches.unshift(branch);
-    } else if(i > 0) {
-        branches.splice(i, 1);
-        branches.unshift(branch);
-    }
-
-    return resolveOne(branches, (branch) =>
+    return resolveOne(getBranches(branch), (branch) =>
         // Check if branch exists
         exists(name, branch).then(() => {
             Vorpal.logger.info(`[NeApp/${name}#${branch}] Installing...`);
