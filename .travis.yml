@@ -5,7 +5,7 @@ before_install:
 - npm install -g npm@'>=5.5.1'
 install:
 - npm install
-- npm ls
+- npm ls || true
 - npm install coveralls
 script:
 - git reset --hard
