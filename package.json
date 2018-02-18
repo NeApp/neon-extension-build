@@ -42,16 +42,29 @@
     "yazl": "^2.4.2"
   },
   "devDependencies": {
-    "@babel/cli": "7.0.0-beta.32"
+    "@babel/cli": "7.0.0-beta.32",
+    "jasmine": "^2.8.0",
+    "jasmine-promises": "^0.4.1",
+    "nyc": "^11.4.1"
   },
   "bin": {
     "neb": "./lib/index.js"
   },
   "scripts": {
     "build": "babel src --out-dir lib",
+    "coverage": "nyc report --reporter=text-lcov | coveralls",
+    "jasmine": "jasmine JASMINE_CONFIG_PATH=jasmine.json",
+    "jasmine:coverage": "nyc --all npm run jasmine",
     "lint": "eslint src/",
     "prepublish": "npm run build",
     "start": "babel-node src/index.js",
-    "test": "eslint src/"
+    "test": "npm run jasmine && npm run lint",
+    "test:develop": "npm run build && npm run jasmine:coverage && npm run lint"
+  },
+  "nyc": {
+    "exclude": [
+      "**/*spec.js",
+      "src"
+    ]
   }
 }

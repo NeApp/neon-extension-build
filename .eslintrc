@@ -191,6 +191,15 @@
     "yoda": [2, "never"]
   },
 
+  "overrides": [
+    {
+      "files": ["**/*spec.js"],
+      "env": {
+        "jasmine": true
+      }
+    }
+  ],
+
   "settings": {
     "import/external-module-folders": [
       "node_modules"
