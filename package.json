@@ -52,9 +52,9 @@
   },
   "scripts": {
     "build": "babel src --out-dir lib",
-    "coverage": "nyc report --reporter=text-lcov | coveralls",
+    "coverage:jasmine": "nyc --all npm run jasmine",
+    "coverage:upload": "nyc report --reporter=text-lcov | coveralls",
     "jasmine": "jasmine JASMINE_CONFIG_PATH=jasmine.json",
-    "jasmine:coverage": "nyc --all npm run jasmine",
     "lint": "eslint src/",
     "prepublish": "npm run build",
     "start": "babel-node src/index.js",

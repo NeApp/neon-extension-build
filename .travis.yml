@@ -5,8 +5,11 @@ before_install:
 - npm install -g npm@'>=5.5.1'
 script:
 - git reset --hard
-- npm run test
 - npm run build
+- npm run coverage:jasmine
+- npm run lint
+after_success:
+- npm run coverage:upload
 deploy:
   provider: npm
   skip_cleanup: true
