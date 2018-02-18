@@ -4,6 +4,7 @@ import Path from 'path';
 import Assets from './assets';
 import Credits from './credits';
 import Extension from './extension';
+import Import from '../../core/helpers/import';
 import Manifest from './manifest';
 import Bintray from '../deploy/bintray';
 import Checksum from '../../core/checksum';
@@ -47,12 +48,6 @@ export const Build = Task.create({
 });
 
 // Import children
-Filesystem.readdirSync(__dirname).forEach(function(name) {
-    try {
-        require(`./${name}`);
-    } catch(e) {
-        console.warn(`Unable to import "./${name}": ${e}`);
-    }
-});
+Import(__dirname);
 
 export default Build;

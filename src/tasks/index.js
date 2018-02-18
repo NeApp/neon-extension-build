@@ -1,10 +1,5 @@
-import Filesystem from 'fs';
+import Import from '../core/helpers/import';
 
 
-Filesystem.readdirSync(__dirname).forEach(function(name) {
-    try {
-        require(`./${name}`);
-    } catch(e) {
-        console.warn(`Unable to import "./${name}": ${e}`);
-    }
-});
+// Import children
+Import(__dirname, '{**/index,*}.js');
