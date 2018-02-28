@@ -71,7 +71,7 @@ function encodeModuleManifests(modules) {
 function getValidPath(...paths) {
     for(let i = 0; i < paths.length; i++) {
         if(Filesystem.existsSync(paths[i])) {
-            return paths[i];
+            return Filesystem.realpathSync(paths[i]);
         }
     }
 
