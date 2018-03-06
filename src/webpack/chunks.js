@@ -2,11 +2,13 @@ import Chalk from 'chalk';
 import Filesystem from 'fs';
 import Filter from 'lodash/filter';
 import ForEach from 'lodash/forEach';
+import IsNil from 'lodash/isNil';
 import Merge from 'lodash/merge';
 import Path from 'path';
 import SortBy from 'lodash/sortBy';
 
 import Vorpal from '../core/vorpal';
+import {isDirectory, resolvePath} from '../core/helpers/path';
 
 
 const Logger = Vorpal.logger;
@@ -33,24 +35,26 @@ function getServices(modules, type, options) {
             return;
         }
 
-        let servicePath = Path.resolve(module.path, `src/services/${name}`);
-        let serviceIndexPath = Path.resolve(servicePath, 'index.js');
+        // Build service directory path
+        let serviceBasePath = Path.resolve(module.path, `src/services/${name}`);
 
-        // Ensure service exists
-        if(!Filesystem.existsSync(serviceIndexPath)) {
-            Logger.error(Chalk.red(
-                `Ignoring service "${name}" for module "${module.name}", ` +
-                `no file exists at: "${serviceIndexPath}"`
-            ));
+        // Resolve service path
+        let servicePath = resolvePath([
+            Path.resolve(serviceBasePath, 'index.js'),
+            `${serviceBasePath}.js`
+        ]);
+
+        if(IsNil(servicePath)) {
+            Logger.error(Chalk.red(`Unable to find "${name}" service for module "${module.name}"`));
             return;
         }
 
         // Include service
-        items.push(serviceIndexPath);
+        items.push(servicePath);
 
         // Include react components (if enabled)
-        if(options.includeComponents) {
-            let componentsPath = Path.resolve(servicePath, 'components/index.js');
+        if(isDirectory(serviceBasePath) && options.includeComponents) {
+            let componentsPath = Path.resolve(serviceBasePath, 'components/index.js');
 
             // Ensure service components exist
             if(Filesystem.existsSync(componentsPath)) {
@@ -88,15 +92,17 @@ function getModuleServices(browser, environment, module) {
         // Build service name
         let name = type.substring(type.indexOf('/') + 1);
 
-        // Build service module path
-        let servicePath = Path.resolve(module.path, `src/services/${name}/index.js`);
+        // Build service directory path
+        let serviceBasePath = Path.resolve(module.path, `src/services/${name}`);
 
-        // Ensure service module exists
-        if(!Filesystem.existsSync(servicePath)) {
-            Logger.error(Chalk.red(
-                `Ignoring service "${name}" for module "${module.name}", ` +
-                `no file exists at: "${servicePath}"`
-            ));
+        // Resolve service path
+        let servicePath = resolvePath([
+            Path.resolve(serviceBasePath, 'index.js'),
+            `${serviceBasePath}.js`
+        ]);
+
+        if(IsNil(servicePath)) {
+            Logger.error(Chalk.red(`Unable to find "${name}" service for module "${module.name}"`));
             continue;
         }
 

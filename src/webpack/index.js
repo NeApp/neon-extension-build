@@ -15,6 +15,7 @@ import Webpack from 'webpack';
 import Validator from './validator';
 import Vorpal from '../core/vorpal';
 import {createChunks} from './chunks';
+import {resolvePath} from '../core/helpers/path';
 
 
 const Logger = Vorpal.logger;
@@ -68,16 +69,6 @@ function encodeModuleManifests(modules) {
     return Pick(manifests, Object.keys(manifests).sort());
 }
 
-function getValidPath(...paths) {
-    for(let i = 0; i < paths.length; i++) {
-        if(Filesystem.existsSync(paths[i])) {
-            return Filesystem.realpathSync(paths[i]);
-        }
-    }
-
-    return null;
-}
-
 function getBabelPaths(browser, environment) {
     let modules = Filter(browser.modules, (module) => module.type !== 'package');
 
@@ -90,7 +81,7 @@ function getBabelPaths(browser, environment) {
 
         // Include additional directories from manifest
         items.push(...module.webpack.babel
-            .map((path) => getValidPath(
+            .map((path) => resolvePath(
                 Path.resolve(module.path, path),
 
                 // Fallback to package modules
