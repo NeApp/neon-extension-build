@@ -178,13 +178,6 @@ function getModuleDetails(browser, environment, path) {
             };
         }
 
-        if(module.name.startsWith('neon-extension-browser-')) {
-            return {
-                type: 'browser',
-                name: module.name
-            };
-        }
-
         if(module.name.startsWith('neon-extension-destination-')) {
             return {
                 type: 'destination',

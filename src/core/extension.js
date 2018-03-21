@@ -74,11 +74,6 @@ function parseManifest(name, data) {
                 'neon-extension-framework'
             ],
 
-            'browsers': [
-                'neon-extension-browser-base',
-                ...data.modules.browsers
-            ],
-
             'packages': [
                 name
             ]

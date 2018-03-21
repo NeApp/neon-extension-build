@@ -51,12 +51,6 @@ function resolveBrowser(packageDir, browser) {
             modules: extension.modules,
             extension
         })))
-        // Retrieve supported browser features
-        .then((browser) => ({
-            ...browser,
-
-            supports: browser.modules[`neon-extension-browser-${browser.name}`].browser
-        }))
         // Resolve browser version
         .then((browser) => ({
             ...browser,
