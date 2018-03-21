@@ -4,6 +4,7 @@ import Filesystem from 'fs';
 import Filter from 'lodash/filter';
 import Find from 'lodash/find';
 import ForEach from 'lodash/forEach';
+import FunctionModulePlugin from 'webpack/lib/FunctionModulePlugin';
 import IsNil from 'lodash/isNil';
 import MapValues from 'lodash/mapValues';
 import Merge from 'lodash/merge';
@@ -316,25 +317,27 @@ function shouldExtractModule(browser, environment, module, count, options) {
 }
 
 export function createConfiguration(browser, environment) {
+    let output = {
+        filename: '[name].js',
+        path: environment.outputPath,
+
+        devtoolModuleFilenameTemplate: (module) => {
+            return generateModuleIdentifier(browser, environment, module);
+        },
+
+        devtoolFallbackModuleFilenameTemplate: (module) => {
+            return generateModuleIdentifier(browser, environment, module, true);
+        }
+    };
+
     return {
         profile: true,
 
         devtool: environment.webpack.devtool,
+        target: () => undefined,
 
         entry: createChunks(browser, environment),
-
-        output: {
-            filename: '[name].js',
-            path: environment.outputPath,
-
-            devtoolModuleFilenameTemplate: (module) => {
-                return generateModuleIdentifier(browser, environment, module);
-            },
-
-            devtoolFallbackModuleFilenameTemplate: (module) => {
-                return generateModuleIdentifier(browser, environment, module, true);
-            }
-        },
+        output,
 
         module: {
             rules: [
@@ -429,6 +432,10 @@ export function createConfiguration(browser, environment) {
         },
 
         plugins: [
+            new Webpack.JsonpTemplatePlugin(output),
+            new FunctionModulePlugin(output),
+            new Webpack.LoaderTargetPlugin("web"),
+
             //
             // Commons Chunks
             //
@@ -512,6 +519,8 @@ export function createConfiguration(browser, environment) {
             //
 
             new Webpack.DefinePlugin({
+                'global': 'window',
+
                 'neon.browser': JSON.stringify({
                     name: browser.name,
                     features: browser.features
@@ -533,7 +542,9 @@ export function createConfiguration(browser, environment) {
 
             new Webpack.ProvidePlugin({
                 '$': 'jquery',
-                'jQuery': 'jquery'
+                'jQuery': 'jquery',
+
+                'process': 'process'
             }),
 
             //
@@ -581,6 +592,12 @@ export function createConfiguration(browser, environment) {
         },
 
         resolve: {
+            mainFields: [
+                'browser',
+                'module',
+                'main'
+            ],
+
             modules: [
                 // Shared modules
                 Path.resolve(browser.path, 'node_modules'),
@@ -594,7 +611,11 @@ export function createConfiguration(browser, environment) {
 
                 'lodash': 'lodash-es',
                 'lodash-amd': 'lodash-es'
-            }
+            },
+
+            aliasFields: [
+                'browser'
+            ]
         }
     };
 }
