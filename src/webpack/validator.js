@@ -24,6 +24,8 @@ export class Validator {
         this.dependencies = {};
         this.peerDependencies = {};
 
+        this._linkedDependencies = {};
+
         this._error = false;
     }
 
@@ -38,11 +40,24 @@ export class Validator {
 
         // Validate each module source
         module.reasons.forEach((source) => {
-            let sources = this._getSources(browser, environment, source) || source;
+            let sourcePath = source.module.userRequest;
 
-            for(let i = 0; i < sources.length; i++) {
-                this.processModuleDependency(browser, environment, sources[i].module.userRequest, module.userRequest);
+            if(!IsNil(sourcePath)) {
+                // Map linked dependency source
+                ForEach(this._linkedDependencies, (source, target) => {
+                    let index = sourcePath.indexOf(target);
+
+                    if(index < 0) {
+                        return;
+                    }
+
+                    // Update `sourcePath`
+                    sourcePath = source + sourcePath.substring(index + target.length);
+                });
             }
+
+            // Process dependency
+            this.processModuleDependency(browser, environment, sourcePath, module.userRequest);
         });
     }
 
@@ -86,15 +101,13 @@ export class Validator {
 
         if(!IsNil(source)) {
             module = Find(browser.modules, (module) => {
-                if(module.type === 'package') {
-                    return false;
-                }
-
                 return source.startsWith(module.path);
             });
 
             if(IsNil(module)) {
-                Logger.warn(`[${dep.name}] Unknown source: "${source}"`);
+                Logger.error(`[${dep.name}] Unknown source: "${source}"`);
+
+                this._error = true;
                 return false;
             }
         }
@@ -122,13 +135,13 @@ export class Validator {
         if(!dependency.match(DependencyVersionRegex)) {
             if(!IsNil(moduleDependency)) {
                 Logger.error(
-                    `Dependency "${dep.name}" for "${module.name}" 
-                    should be pinned to a version (found: ${dependency})`
+                    `Dependency "${dep.name}" for "${module.name}" ` +
+                    `should be pinned to a version (found: ${dependency})`
                 );
             } else {
                 Logger.error(
-                    `Dependency "${dep.name}" 
-                    should be pinned to a version (found: ${dependency})`
+                    `Dependency "${dep.name}" ` +
+                    `should be pinned to a version (found: ${dependency})`
                 );
             }
 
@@ -139,8 +152,8 @@ export class Validator {
         // Ensure dependencies aren't duplicated
         if(!IsNil(moduleDependency) && !IsNil(extensionDependency)) {
             Logger.error(
-                `Dependency "${dep.name}" has been duplicated 
-                (extension: ${extensionDependency}, ${module.name}: ${moduleDependency})`
+                `Dependency "${dep.name}" has been duplicated ` +
+                `(extension: ${extensionDependency}, ${module.name}: ${moduleDependency})`
             );
 
             this._error = true;
@@ -180,8 +193,8 @@ export class Validator {
             // Ensure extension dependency matches peer dependency range
             if(!IsNil(extensionDependency) && !SemanticVersion.satisfies(extensionDependency, modulePeerDependency)) {
                 Logger.error(
-                    `"${dep.name}" peer dependency in "${module.name}" (${modulePeerDependency}) 
-                    is not satisfied by extension version: ${extensionDependency}`
+                    `"${dep.name}" peer dependency in "${module.name}" (${modulePeerDependency}) ` +
+                    `is not satisfied by extension version: ${extensionDependency}`
                 );
 
                 this._error = true;
@@ -190,6 +203,10 @@ export class Validator {
         }
 
         return true;
+    }
+
+    registerLinkedDependency(source, target) {
+        this._linkedDependencies[target] = source;
     }
 
     finish(browser, environment) {
@@ -255,24 +272,11 @@ export class Validator {
             return [source];
         }
 
-        // Try match source against module
-        let module = Find(browser.modules, (module) => {
-            if(module.type === 'package') {
-                return false;
-            }
-
-            return source.module.userRequest.startsWith(module.path);
-        });
-
-        if(!IsNil(module)) {
-            return [source];
-        }
-
         // Build list of sources
         let result = [];
 
         for(let i = 0; i < source.module.reasons.length; i++) {
-            result.push.apply(result, this._getSources(browser, environment, source.module.reasons[0]));
+            result.push.apply(result, source.module.reasons[i]);
         }
 
         return UniqBy(result, (source) =>

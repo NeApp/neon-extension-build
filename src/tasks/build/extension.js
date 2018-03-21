@@ -2,6 +2,7 @@ import Chalk from 'chalk';
 import Filesystem from 'fs-extra';
 import ForEach from 'lodash/forEach';
 import IsNil from 'lodash/isNil';
+import Map from 'lodash/map';
 import Mkdirp from 'mkdirp';
 import PadEnd from 'lodash/padEnd';
 import Path from 'path';
@@ -10,8 +11,10 @@ import Util from 'util';
 import Webpack from 'webpack';
 
 import Clean from '../clean';
+import Validator from '../../webpack/validator';
 import {Task} from '../../core/helpers';
 import {createConfiguration} from '../../webpack';
+import {runSequential} from '../../core/helpers/promise';
 
 
 function constructCompiler(browser, environment) {
@@ -36,6 +39,30 @@ function constructCompiler(browser, environment) {
 
     // Construct compiler
     return Webpack(configuration);
+}
+
+function registerLinkedDependencies(rootPath) {
+    return Filesystem.readdir(rootPath).then((names) => runSequential(names, (name) => {
+        let path = Path.join(rootPath, name);
+
+        // Search scope directories
+        if(name.indexOf('@') === 0) {
+            return registerLinkedDependencies(path);
+        }
+
+        // Retrieve statistics for `path`
+        return Filesystem.lstat(path).then((stats) => {
+            if(!stats.isSymbolicLink()) {
+                return;
+            }
+
+            // Read link target
+            return Filesystem.realpath(path).then((target) => {
+                // Register dependency
+                Validator.registerLinkedDependency(path, target);
+            });
+        });
+    }));
 }
 
 function runCompiler(compiler) {
@@ -74,10 +101,15 @@ export const Extension = Task.create({
         return Promise.reject(e);
     }
 
-    // Run compiler
-    return runCompiler(compiler)
+    return Promise.resolve()
+        // Register linked dependencies
+        .then(() => Promise.all(Map(browser.modules, (module) =>
+            registerLinkedDependencies(Path.join(module.path, 'node_modules'))
+        )))
+        // Run compiler
+        .then(() => runCompiler(compiler))
+        // Display statistics
         .then((stats) => {
-            // Log statistics
             log.info(stats.toString('normal'));
 
             // Write statistics to file
