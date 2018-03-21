@@ -229,6 +229,11 @@ export function createChunks(browser, environment) {
             ...getServices(modules, 'configuration'),
             'neon-extension-core/modules/background/messaging'
         ],
+        'background/messaging/services/contentScript': [
+            ...browser.webpack.common,
+            ...getServices(modules, 'configuration'),
+            'neon-extension-core/modules/background/messaging/services/contentScript'
+        ],
         'background/messaging/services/library': [
             ...browser.webpack.common,
             ...getServices(modules, 'configuration'),
@@ -239,11 +244,6 @@ export function createChunks(browser, environment) {
             ...getServices(modules, 'configuration'),
             ...getServices(destinations, 'destination/scrobble'),
             'neon-extension-core/modules/background/messaging/services/scrobble'
-        ],
-        'background/messaging/services/storage': [
-            ...browser.webpack.common,
-            ...getServices(modules, 'configuration'),
-            'neon-extension-core/modules/background/messaging/services/storage'
         ],
 
         //

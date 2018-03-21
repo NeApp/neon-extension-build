@@ -440,9 +440,9 @@ export function createConfiguration(browser, environment) {
                     'background/migrate/migrate',
 
                     'background/messaging/messaging',
+                    'background/messaging/services/contentScript',
                     'background/messaging/services/library',
-                    'background/messaging/services/scrobble',
-                    'background/messaging/services/storage'
+                    'background/messaging/services/scrobble'
                 ],
 
                 minChunks: (module, count) => shouldExtractModule(browser, environment, module, count, {
