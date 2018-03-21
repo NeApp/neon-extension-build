@@ -376,8 +376,9 @@ export function createConfiguration(browser, environment) {
                 {
                     test: /\.js$/,
                     include: [
-                        Path.resolve(browser.path, 'node_modules/foundation-sites'),
-                        Path.resolve(browser.path, 'node_modules/lodash-es'),
+                        Filesystem.realpathSync(Path.resolve(browser.path, 'node_modules/foundation-sites')),
+                        Filesystem.realpathSync(Path.resolve(browser.path, 'node_modules/lodash-es')),
+                        Filesystem.realpathSync(Path.resolve(browser.path, 'node_modules/wes')),
 
                         ...getBabelPaths(browser, environment)
                     ],
@@ -511,9 +512,10 @@ export function createConfiguration(browser, environment) {
             //
 
             new Webpack.DefinePlugin({
-                'neon.browser': JSON.stringify(
-                    browser.supports
-                ),
+                'neon.browser': JSON.stringify({
+                    name: browser.name,
+                    features: browser.features
+                }),
                 'neon.manifests': JSON.stringify({
                     'neon-extension': encodeExtensionManifest(browser.extension),
 
@@ -590,6 +592,7 @@ export function createConfiguration(browser, environment) {
             alias: {
                 ...getModuleAliases(browser),
 
+                'lodash': 'lodash-es',
                 'lodash-amd': 'lodash-es'
             }
         }

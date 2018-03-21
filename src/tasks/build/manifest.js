@@ -122,13 +122,13 @@ function buildManifest(browser, environment, manifests) {
 
 function getContentScriptPatterns(module) {
     return Reduce(module.manifest.content_scripts, (result, contentScript) => {
-        ForEach(contentScript.conditions, (condition) => {
-            if(IsNil(condition) || IsNil(condition.pattern)) {
+        ForEach(contentScript.matches, (pattern) => {
+            if(IsNil(pattern)) {
                 throw new Error('Invalid content script condition');
             }
 
             // Include pattern in result
-            result.push(condition.pattern);
+            result.push(pattern);
         });
 
         return result;
@@ -147,13 +147,13 @@ function buildModulePermissions(browser, module) {
     ];
 
     // Declarative Content
-    if(browser.supports.api['declarativeContent'] && browser.supports.api['permissions']) {
+    if(browser.features.contentScripts === 'dynamic') {
         optionalPermissions = optionalPermissions.concat(getContentScriptPatterns(module));
     }
 
     // Destination / Source
     if(['destination', 'source'].indexOf(module.type) >= 0) {
-        if(browser.supports.api['permissions']) {
+        if(browser.features.permissions === 'dynamic') {
             // Request permissions when the module is enabled
             return {
                 'permissions': [],
@@ -217,7 +217,7 @@ function buildModuleManifest(browser, environment, module) {
     };
 
     // Content Scripts (if the browser doesn't support declarative content)
-    if(!browser.supports.api['declarativeContent'] || !browser.supports.api['permissions']) {
+    if(browser.features.contentScripts !== 'dynamic' || browser.features.permissions !== 'dynamic') {
         manifest['content_scripts'] = module.manifest['content_scripts'].map((contentScript) =>
             createContentScript(browser, environment, contentScript)
         );
