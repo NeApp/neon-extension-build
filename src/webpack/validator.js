@@ -2,6 +2,7 @@ import Filesystem from 'fs-extra';
 import Filter from 'lodash/filter';
 import Find from 'lodash/find';
 import ForEach from 'lodash/forEach';
+import Get from 'lodash/get';
 import IsNil from 'lodash/isNil';
 import Path from 'path';
 import SemanticVersion from 'semver';
@@ -24,7 +25,7 @@ export class Validator {
         this.dependencies = {};
         this.peerDependencies = {};
 
-        this._linkedDependencies = {};
+        this.links = {};
 
         this._error = false;
     }
@@ -44,7 +45,7 @@ export class Validator {
 
             if(!IsNil(sourcePath)) {
                 // Map linked dependency source
-                ForEach(this._linkedDependencies, (source, target) => {
+                ForEach(Get(this.links, [browser.name, environment.name]), (source, target) => {
                     let index = sourcePath.indexOf(target);
 
                     if(index < 0) {
@@ -162,9 +163,9 @@ export class Validator {
 
         // Mark dependency
         if(!IsNil(moduleDependency)) {
-            Set(this.dependencies, [environment, module.name, dep.name], true);
+            Set(this.dependencies, [browser.name, environment.name, module.name, dep.name], true);
         } else {
-            Set(this.dependencies, [environment, null, dep.name], true);
+            Set(this.dependencies, [browser.name, environment.name, null, dep.name], true);
         }
 
         // Validate module dependency
@@ -172,7 +173,7 @@ export class Validator {
             let modulePeerDependency = module.package.peerDependencies[dep.name];
 
             // Mark peer dependency
-            Set(this.peerDependencies, [environment, module.name, dep.name], true);
+            Set(this.peerDependencies, [browser.name, environment.name, module.name, dep.name], true);
 
             // Ensure peer dependency is defined
             if(!IsNil(extensionDependency) && IsNil(modulePeerDependency)) {
@@ -205,8 +206,8 @@ export class Validator {
         return true;
     }
 
-    registerLinkedDependency(source, target) {
-        this._linkedDependencies[target] = source;
+    registerLink(browser, environment, source, target) {
+        Set(this.links, [browser.name, environment.name, target], source);
     }
 
     finish(browser, environment) {
@@ -214,27 +215,31 @@ export class Validator {
             throw new Error('Build didn\'t pass validation');
         }
 
-        if(IsNil(this.dependencies[environment]) || IsNil(this.peerDependencies[environment])) {
+        if(IsNil(this.dependencies[browser.name]) || IsNil(this.dependencies[browser.name][environment.name])) {
+            return;
+        }
+
+        if(IsNil(this.peerDependencies[browser.name]) || IsNil(this.peerDependencies[browser.name][environment.name])) {
             return;
         }
 
         // Ensure there are no unused extension dependencies
         this._checkDependencies('Dependency',
             browser.extension.package.dependencies,
-            this.dependencies[environment][null]
+            this.dependencies[browser.name][environment.name][null]
         );
 
         // Ensure there are no unused module dependencies
         ForEach(Filter(browser.modules, (module) => module.type !== 'package'), (module) => {
             this._checkDependencies('Dependency',
                 module.package.dependencies,
-                this.dependencies[environment][module.name],
+                this.dependencies[browser.name][environment.name][module.name],
                 module.name
             );
 
             this._checkDependencies('Peer dependency',
                 module.package.peerDependencies,
-                this.peerDependencies[environment][module.name],
+                this.peerDependencies[browser.name][environment.name][module.name],
                 module.name
             );
         });

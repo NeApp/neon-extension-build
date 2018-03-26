@@ -41,25 +41,25 @@ function constructCompiler(browser, environment) {
     return Webpack(configuration);
 }
 
-function registerLinkedDependencies(rootPath) {
+function registerLinks(browser, environment, rootPath) {
     return Filesystem.readdir(rootPath).then((names) => runSequential(names, (name) => {
         let path = Path.join(rootPath, name);
 
         // Search scope directories
         if(name.indexOf('@') === 0) {
-            return registerLinkedDependencies(path);
+            return registerLinks(browser, environment, path);
         }
 
         // Retrieve statistics for `path`
         return Filesystem.lstat(path).then((stats) => {
             if(!stats.isSymbolicLink()) {
-                return;
+                return Promise.resolve();
             }
 
             // Read link target
             return Filesystem.realpath(path).then((target) => {
-                // Register dependency
-                Validator.registerLinkedDependency(path, target);
+                // Register link
+                Validator.registerLink(browser, environment, path, target);
             });
         });
     }));
@@ -102,9 +102,9 @@ export const Extension = Task.create({
     }
 
     return Promise.resolve()
-        // Register linked dependencies
+        // Register dependency links
         .then(() => Promise.all(Map(browser.modules, (module) =>
-            registerLinkedDependencies(Path.join(module.path, 'node_modules'))
+            registerLinks(browser, environment, Path.join(module.path, 'node_modules'))
         )))
         // Run compiler
         .then(() => runCompiler(compiler))
