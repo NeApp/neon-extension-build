@@ -73,13 +73,13 @@ export class Validator {
         try {
             dep = this._parseDependency(request);
         } catch(e) {
-            console.log(`Unable to parse dependency: "${request}": ${e}`);
+            Logger.warn(`Unable to parse dependency: "${request}": ${e}`);
             return false;
         }
 
         // Validate package information
         if(IsNil(dep)) {
-            console.log(`Unable to parse dependency: "${request}"`);
+            Logger.warn(`Unable to parse dependency: "${request}"`);
             return false;
         }
 

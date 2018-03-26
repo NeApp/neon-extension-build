@@ -434,7 +434,7 @@ export function createConfiguration(browser, environment) {
         plugins: [
             new Webpack.JsonpTemplatePlugin(output),
             new FunctionModulePlugin(output),
-            new Webpack.LoaderTargetPlugin("web"),
+            new Webpack.LoaderTargetPlugin('web'),
 
             //
             // Commons Chunks

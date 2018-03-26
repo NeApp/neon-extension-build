@@ -3,7 +3,10 @@ import Glob from 'glob';
 import IsNil from 'lodash/isNil';
 import IsPlainObject from 'lodash/isPlainObject';
 import IsString from 'lodash/isString';
+import Vorpal from '../vorpal';
 
+
+const Logger = Vorpal.logger;
 
 export function importGlob(path, options) {
     if(IsString(options)) {
@@ -41,7 +44,7 @@ export function importGlob(path, options) {
             nodir: true
         });
     } catch(e) {
-        console.error(`Unable to find modules: ${e.message || e}`);
+        Logger.error(`Unable to find modules: ${e.message || e}`);
         return;
     }
 
@@ -50,7 +53,7 @@ export function importGlob(path, options) {
         try {
             require(name);
         } catch(e) {
-            console.warn(`Unable to import "${name}": ${e}`);
+            Logger.warn(`Unable to import "${name}": ${e}`);
         }
     });
 }
