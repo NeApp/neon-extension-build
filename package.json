@@ -59,7 +59,7 @@
     "prepublish": "npm run build",
     "start": "babel-node src/index.js",
     "test": "npm run jasmine && npm run lint",
-    "test:develop": "npm run build && npm run jasmine:coverage && npm run lint"
+    "test:develop": "npm run build && npm run coverage:jasmine && npm run lint"
   },
   "nyc": {
     "exclude": [
