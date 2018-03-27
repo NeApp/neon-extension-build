@@ -207,6 +207,22 @@ export class Validator {
     }
 
     registerLink(browser, environment, source, target) {
+        if(Path.basename(source).indexOf('neon-extension-') === 0) {
+            return;
+        }
+
+        // Prefer browser package sources
+        let current = Get(this.links, [browser.name, environment.name, target]);
+
+        if(!IsNil(current)) {
+            let module = Path.basename(current.substring(0, current.lastIndexOf('node_modules') - 1));
+
+            if(browser.package === module) {
+                return;
+            }
+        }
+
+        // Register link
         Set(this.links, [browser.name, environment.name, target], source);
     }
 
