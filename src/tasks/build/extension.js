@@ -45,7 +45,7 @@ function registerLinks(browser, environment, rootPath) {
     if(!Filesystem.existsSync(rootPath)) {
         return Promise.resolve();
     }
-    
+
     return Filesystem.readdir(rootPath).then((names) => runSequential(names, (name) => {
         let path = Path.join(rootPath, name);
 
