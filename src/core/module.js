@@ -8,6 +8,7 @@ import Omit from 'lodash/omit';
 import Path from 'path';
 import Pick from 'lodash/pick';
 import Reduce from 'lodash/reduce';
+import Uniq from 'lodash/uniq';
 
 import Git from './git';
 import Version from './version';
@@ -78,8 +79,23 @@ function readContributors(path) {
     }, () => ([]));
 }
 
-function parseModuleManifest(data) {
-    return Merge({
+function getContentScriptOrigins(contentScripts) {
+    return Reduce(contentScripts, (result, contentScript) => {
+        ForEach(contentScript.matches, (origin) => {
+            if(IsNil(origin)) {
+                throw new Error(`Invalid content script origin: ${origin}`);
+            }
+
+            // Include origin in result
+            result.push(origin);
+        });
+
+        return result;
+    }, []);
+}
+
+function parseModuleManifest(extension, data) {
+    let manifest = Merge({
         'title': data.name || null,
         'icons': {},
 
@@ -99,9 +115,22 @@ function parseModuleManifest(data) {
             'modules': []
         }
     }, data);
+
+    // Include content script origins
+    if(extension.features.contentScripts === 'dynamic') {
+        manifest['origins'] = manifest['origins'].concat(getContentScriptOrigins(manifest['content_scripts']));
+    }
+
+    // Remove duplicate origins
+    manifest.origins = Uniq(manifest.origins);
+
+    // Remove duplicate permissions
+    manifest.permissions = Uniq(manifest.permissions);
+
+    return manifest;
 }
 
-function readModuleManifest(path) {
+function readModuleManifest(extension, path) {
     // Read module manifest from file
     return Filesystem.readJson(Path.join(path, 'module.json')).then((data) => {
         if(!IsPlainObject(data)) {
@@ -111,10 +140,10 @@ function readModuleManifest(path) {
         }
 
         // Parse module manifest
-        return parseModuleManifest(data);
+        return parseModuleManifest(extension, data);
     }, () => {
         // Return default module manifest
-        return parseModuleManifest({});
+        return parseModuleManifest(extension, {});
     });
 }
 
@@ -214,7 +243,7 @@ export function resolve(extension, path, type, name) {
             contributors
         })))
         // Resolve module manifest
-        .then((module) => readModuleManifest(module.path).then((manifest) => ({
+        .then((module) => readModuleManifest(extension, module.path).then((manifest) => ({
             ...module,
             ...manifest,
 

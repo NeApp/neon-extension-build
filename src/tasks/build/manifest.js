@@ -120,21 +120,6 @@ function buildManifest(browser, environment, manifests) {
     return OmitBy(current, IsNil);
 }
 
-function getContentScriptPatterns(module) {
-    return Reduce(module.manifest.content_scripts, (result, contentScript) => {
-        ForEach(contentScript.matches, (pattern) => {
-            if(IsNil(pattern)) {
-                throw new Error('Invalid content script condition');
-            }
-
-            // Include pattern in result
-            result.push(pattern);
-        });
-
-        return result;
-    }, []);
-}
-
 function buildModulePermissions(browser, module) {
     let permissions = [
         ...module.manifest.origins,
@@ -145,11 +130,6 @@ function buildModulePermissions(browser, module) {
         ...module.manifest.optional_origins,
         ...module.manifest.optional_permissions
     ];
-
-    // Declarative Content
-    if(browser.features.contentScripts === 'dynamic') {
-        optionalPermissions = optionalPermissions.concat(getContentScriptPatterns(module));
-    }
 
     // Destination / Source
     if(['destination', 'source'].indexOf(module.type) >= 0) {
