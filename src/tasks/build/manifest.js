@@ -1,13 +1,11 @@
 import CloneDeep from 'lodash/cloneDeep';
 import Filesystem from 'fs-extra';
 import Filter from 'lodash/filter';
-import ForEach from 'lodash/forEach';
 import IsNil from 'lodash/isNil';
 import Map from 'lodash/map';
 import OmitBy from 'lodash/omitBy';
 import Path from 'path';
 import Pick from 'lodash/pick';
-import Reduce from 'lodash/reduce';
 import Remove from 'lodash/remove';
 import Uniq from 'lodash/uniq';
 
