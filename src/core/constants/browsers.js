@@ -34,7 +34,19 @@ const FirefoxBrowser = {
     package: 'neon-extension-firefox'
 };
 
+const OperaBrowser = {
+    ...CloneDeep(BaseBrowser),
+
+    name: 'opera',
+
+    title: 'Opera',
+    package: 'neon-extension-opera',
+
+    includeVersionName: true
+};
+
 export default {
     chrome: ChromeBrowser,
-    firefox: FirefoxBrowser
+    firefox: FirefoxBrowser,
+    opera: OperaBrowser
 };
