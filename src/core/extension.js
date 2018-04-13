@@ -125,7 +125,7 @@ function overlayManifest(extension, path) {
 }
 
 export function resolve(packageDir, path, name) {
-    return Promise.resolve({})
+    return Promise.resolve({ path })
         // Resolve package details
         .then((extension) => readPackageDetails(path).then((pkg) => {
             if(pkg.name !== name) {
