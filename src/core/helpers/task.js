@@ -10,6 +10,7 @@ import Browser from '../browser';
 import Environment from '../environment';
 import Vorpal from '../vorpal';
 import {Browsers, Environments} from '../constants';
+import {runSequential} from '../../core/helpers/promise';
 
 
 const Logger = Vorpal.logger;
@@ -106,7 +107,8 @@ export function createTask({name, required = [], optional = []}, handler = null)
                     promise = environment.tasks[name] = Promise.resolve().then(() => handler(
                         createLogger(prefix, name),
                         browser,
-                        environment
+                        environment,
+                        options
                     ));
 
                     // Display task result
@@ -148,13 +150,16 @@ export function createTask({name, required = [], optional = []}, handler = null)
 }
 
 export function createRunner(task, defaultOptions) {
-    return function({options}) {
+    return function({options, ...args}) {
         // Set default options
         options = {
             'browser': 'all',
             'environment': 'development',
 
             ...(defaultOptions || {}),
+
+            // Override with provided arguments/options
+            ...args,
             ...options,
 
             // Resolve directories
@@ -167,7 +172,7 @@ export function createRunner(task, defaultOptions) {
             Logger.error(`Unable to resolve browser(s): ${err.stack || err.message || err}`);
             return Promise.reject(err);
         }).then((browsers) =>
-            Promise.all(browsers.map((browser) => {
+            runSequential(browsers, (browser) => {
                 // Try create new build environment
                 let environment;
 
@@ -201,15 +206,15 @@ export function createRunner(task, defaultOptions) {
                 ));
 
                 // Run task
-                return task(browser, environment);
-            }))
+                return task(browser, environment, options);
+            })
         ).catch(() => {
             Process.exit(1);
         });
     };
 }
 
-export function create({name, description, required, optional}, handler = null, defaultOptions = {}) {
+export function create({name, description, required, optional, command}, handler = null, defaultOptions = {}) {
     let task = createTask({
         name: name.substring(0, name.indexOf(' ')) || name,
 
@@ -217,8 +222,13 @@ export function create({name, description, required, optional}, handler = null, 
         optional
     }, handler);
 
+    // Set defaults
+    if(IsNil(command)) {
+        command = (cmd) => cmd;
+    }
+
     // Create command
-    Vorpal.command(name, description)
+    command(Vorpal.command(name, description))
         .option('--build-dir <build-dir>', 'Build Directory [default: ./build]')
         .option('--package-dir <package-dir>', 'Package Directory [default: ./]')
         .option('--browser <browser>', 'Browser [default: all]', Object.keys(Browsers))
