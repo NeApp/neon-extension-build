@@ -8,10 +8,26 @@ function parsePackageDetails(data) {
     return Merge({
         name: null,
         version: null,
+        description: null,
+        keywords: null,
+
+        homepage: null,
+        author: null,
+        license: null,
+
+        main: null,
+        private: null,
+
+        bugs: null,
+        engines: null,
+        repository: null,
 
         dependencies: {},
         devDependencies: {},
-        peerDependencies: {}
+        peerDependencies: {},
+
+        bin: null,
+        scripts: null
     }, data);
 }
 
