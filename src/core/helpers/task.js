@@ -210,7 +210,12 @@ export function createRunner(task, defaultOptions) {
 }
 
 export function create({name, description, required, optional}, handler = null, defaultOptions = {}) {
-    let task = createTask({name, required, optional}, handler);
+    let task = createTask({
+        name: name.substring(0, name.indexOf(' ')) || name,
+
+        required,
+        optional
+    }, handler);
 
     // Create command
     Vorpal.command(name, description)
