@@ -19,10 +19,9 @@ const ModuleType = {
     'core': {
         name: 'core'
     },
-
-    'browsers': {
-        name: 'browser',
-        directory: 'Browsers/'
+    'tool': {
+        name: 'tool',
+        directory: 'Tools/'
     },
 
     'packages': {
@@ -34,7 +33,6 @@ const ModuleType = {
         name: 'destination',
         directory: 'Destinations/'
     },
-
     'sources': {
         name: 'source',
         directory: 'Sources/'
@@ -259,6 +257,9 @@ export function resolve(extension, path, type, name) {
 export function resolveMany(path, extension) {
     // Resolve each module
     return Promise.all(Reduce(extension.modules, (promises, names, type) => {
+        promises.push(resolve(extension, path, 'tool', 'neon-extension-build'));
+
+        // Add enabled modules
         ForEach(names, (name) => {
             promises.push(resolve(extension, path, type, name));
         });
