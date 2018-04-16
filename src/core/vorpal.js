@@ -8,15 +8,15 @@ const vorpal = Vorpal()
     .delimiter('neon-extension-build$');
 
 function log(msg) {
-    if (typeof msg === 'string') {
-        if (vorpal.logger.options.preformat != null) {
+    if(typeof msg === 'string') {
+        if(vorpal.logger.options.preformat != null) {
             msg = vorpal.logger.options.preformat(msg);
         }
     } else {
         msg = Util.inspect(msg);
     }
 
-    return "" + (vorpal.logger.printDate()) + msg;
+    return `${vorpal.logger.printDate()}${msg}`;
 }
 
 // Setup logger formats
