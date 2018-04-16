@@ -9,7 +9,7 @@ import Json from '../core/json';
 import {Task} from '../core/helpers';
 
 
-function updateContributors(path, existing) {
+function resolveContributors(path, existing) {
     return Git.contributors(path).then((current) =>
         SortBy(Object.values(Merge(
             KeyBy(existing, 'name'),
@@ -18,30 +18,26 @@ function updateContributors(path, existing) {
     );
 }
 
-function update(repository, path) {
-    if(repository.ahead <= 0) {
-        return Promise.resolve();
-    }
-
+export function writeContributors(repository, path) {
     let contributorsPath = Path.join(path, 'contributors.json');
 
     // Read existing contributors from file
     return Json.read(contributorsPath)
         // Update contributors with current repository commits
-        .then((existing) => updateContributors(path, existing || []))
+        .then((existing) => resolveContributors(path, existing || []))
         // Write contributors to file
         .then((contributors) => Json.write(contributorsPath, contributors, { spaces: 2}));
 }
 
-function updateBuilder(path) {
+function updatePackage(path) {
     return Git.status(path).then((repository) =>
-        update(repository, path)
+        writeContributors(repository, path)
     );
 }
 
 function updateModules(modules) {
     return Promise.all(Map(modules, (module) =>
-        update(module.repository, module.path)
+        writeContributors(module.repository, module.path)
     ));
 }
 
@@ -51,7 +47,7 @@ export const Contributors = Task.create({
 }, (log, browser, environment) => {
     // Update contributors
     return Promise.all([
-        updateBuilder(environment.builderPath),
+        updatePackage(environment.builderPath),
         updateModules(browser.modules)
     ]);
 });
