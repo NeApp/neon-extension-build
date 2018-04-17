@@ -178,6 +178,7 @@ export function createRunner(task, defaultOptions) {
         options = {
             'browser': 'all',
             'environment': 'development',
+            'debug': false,
 
             ...(defaultOptions || {}),
 
@@ -189,6 +190,11 @@ export function createRunner(task, defaultOptions) {
             'build-dir': Path.resolve(process.cwd(), options['build-dir'] || './build'),
             'package-dir': Path.resolve(process.cwd(), options['package-dir'] || './')
         };
+
+        // Configure logger
+        if(options['debug']) {
+            Vorpal.logger.setFilter('debug');
+        }
 
         // Run task for each browser
         return Browser.resolve(options['package-dir'], options.browser).catch((err) => {
@@ -259,6 +265,7 @@ export function create({name, description, required, optional, command}, handler
         .option('--package-dir <package-dir>', 'Package Directory [default: ./]')
         .option('--browser <browser>', 'Browser [default: all]', Object.keys(Browsers))
         .option('--environment <environment>', 'Environment [default: development]', Object.keys(Environments))
+        .option('--debug', 'Enable debug messages')
         .action(createRunner(task, defaultOptions));
 
     // Store task reference
