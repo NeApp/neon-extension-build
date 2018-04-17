@@ -58,7 +58,7 @@
     "jasmine": "jasmine JASMINE_CONFIG_PATH=jasmine.json",
     "lint": "eslint src/",
     "prepublish": "npm run build",
-    "start": "babel-node src/index.js",
+    "start": "babel-node -- src/index.js",
     "test": "npm run jasmine && npm run lint",
     "test:develop": "npm run build && npm run coverage:jasmine && npm run lint"
   },
