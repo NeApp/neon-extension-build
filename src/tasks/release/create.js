@@ -6,13 +6,12 @@ import Map from 'lodash/map';
 import MapValues from 'lodash/mapValues';
 import OmitBy from 'lodash/omitBy';
 import Path from 'path';
-import PickBy from 'lodash/pickBy';
 import SemanticVersion from 'semver';
 import SimpleGit from 'simple-git/promise';
-import Values from 'lodash/values';
 
 import Git from '../../core/git';
 import {Task} from '../../core/helpers';
+import {getPackages} from './core/helpers';
 import {runSequential} from '../../core/helpers/promise';
 import {writeContributors} from '../contributors';
 
@@ -21,26 +20,6 @@ export const ReleaseFiles = [
     'contributors.json',
     'package.json'
 ];
-
-function getModulesOrdered(browser) {
-    return [
-        browser.modules['neon-extension-build'],
-
-        // Core
-        browser.modules['neon-extension-framework'],
-        browser.modules['neon-extension-core'],
-
-        // Plugins
-        ...Values(PickBy(browser.modules, (module) => [
-            'core',
-            'tool',
-            'package'
-        ].indexOf(module.type) < 0)),
-
-        // Extension
-        browser.extension
-    ];
-}
 
 function isPatchRelease(current, next) {
     return (
@@ -53,7 +32,7 @@ function createReleases(log, browser, version, options) {
     log.debug('Creating releases...');
 
     // Create releases for each module with changes
-    return runSequential(getModulesOrdered(browser), (module) => {
+    return runSequential(getPackages(browser), (module) => {
         let repository = SimpleGit(module.path).silent(true);
 
         return repository.status().then((status) => {
@@ -125,7 +104,7 @@ function updateContributors(log, browser, options) {
     log.debug('Updating contributors...');
 
     // Update contributors for each module with changes
-    return runSequential(getModulesOrdered(browser), (module) => {
+    return runSequential(getPackages(browser), (module) => {
         // Retrieve module repository status
         return Git.status(module.path).then((repository) => {
             if(!repository.dirty && !options.force) {
@@ -175,7 +154,7 @@ function updatePackages(log, browser, version, options) {
     log.debug('Updating packages...');
 
     // Update package metadata for each module
-    return runSequential(getModulesOrdered(browser), (module) => {
+    return runSequential(getPackages(browser), (module) => {
         let pkg = CloneDeep(module.package);
 
         // Ensure package metadata exists

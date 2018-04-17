@@ -1,5 +1,8 @@
 import Https from 'https';
+import Octokit from '@octokit/rest';
 
+
+export const GithubApi = Octokit();
 
 export function exists(name, branch) {
     return new Promise((resolve, reject) => {
