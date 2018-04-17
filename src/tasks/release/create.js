@@ -251,7 +251,7 @@ export const CreateRelease = Task.create({
     )
 }, (log, browser, environment, {version, ...options}) => {
     // Ensure the provided `version` is valid
-    if(!SemanticVersion.valid(version)) {
+    if(version.length < 1 || version.indexOf('v') === 0 || !SemanticVersion.valid(version)) {
         return Promise.reject(new Error(`Invalid version: ${version}`));
     }
 
