@@ -246,7 +246,7 @@ export class Validator {
         );
 
         // Ensure there are no unused module dependencies
-        ForEach(Filter(browser.modules, (module) => module.type !== 'package'), (module) => {
+        ForEach(Filter(browser.modules, (module) => ['package', 'tool'].indexOf(module.type) < 0), (module) => {
             this._checkDependencies('Dependency',
                 module.package.dependencies,
                 this.dependencies[browser.name][environment.name][module.name],
