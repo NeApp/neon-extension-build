@@ -107,7 +107,7 @@ function pushBranches(log, module, repository, remotes, commit, tag) {
 
                 // Build successful
                 return Promise.resolve();
-            })
+            });
         });
     });
 }
