@@ -1,8 +1,29 @@
 import Filesystem from 'fs-extra';
+import Filter from 'lodash/filter';
+import IsNil from 'lodash/isNil';
 import IsPlainObject from 'lodash/isPlainObject';
 import Merge from 'lodash/merge';
 import Path from 'path';
 
+
+export function getPackageModules(path) {
+    return Filesystem.readJson(path).then((pkg) => {
+        let match = /^neon-extension-(\w+)$/.exec(pkg.name);
+
+        if(IsNil(match) || ['build', 'core', 'framework'].indexOf(match[1]) >= 0) {
+            return Promise.reject(new Error(
+                `Invalid package: ${pkg.name} (expected current directory to contain a browser package)`
+            ));
+        }
+
+        // Find package modules
+        return Filter(Object.keys(pkg.dependencies), (name) =>
+            name.indexOf('neon-extension-') === 0 && [
+                'neon-extension-build'
+            ].indexOf(name) < 0
+        );
+    });
+}
 
 function parsePackageDetails(data) {
     return Merge({
@@ -49,5 +70,6 @@ export function readPackageDetails(path) {
 }
 
 export default {
+    getPackageModules,
     readPackageDetails
 };
