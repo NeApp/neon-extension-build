@@ -1,6 +1,7 @@
 import Chalk from 'chalk';
 import ForEach from 'lodash/forEach';
 import IsNil from 'lodash/isNil';
+import IsString from 'lodash/isString';
 import PadEnd from 'lodash/padEnd';
 import Path from 'path';
 import Process from 'process';
@@ -14,6 +15,8 @@ import {runSequential} from '../../core/helpers/promise';
 
 
 const Logger = Vorpal.logger;
+
+const Tasks = {};
 const Timer = new Time();
 
 function getBrowserColour({dirty, extension}) {
@@ -78,15 +81,35 @@ export function createTask({name, required = [], optional = []}, handler = null)
 
         return Promise.resolve()
             // Resolve required dependencies
-            .then(() => Promise.all(required.map((dep) => dep(browser, environment).catch(() =>
-                Promise.reject(new Error('Unable to build required dependency'))
-            ))))
+            .then(() => Promise.all(required.map((name) => {
+                if(!IsString(name)) {
+                    return Promise.reject(`Invalid dependency: ${name} (expected string)`);
+                }
+
+                if(IsNil(Tasks[name])) {
+                    return Promise.reject(`Unknown dependency: ${name}`);
+                }
+
+                return Tasks[name](browser, environment).catch(() =>
+                    Promise.reject(new Error('Unable to build required dependency'))
+                );
+            })))
             // Resolve optional dependencies
-            .then(() => Promise.all(optional.map((dep) => dep(browser, environment, {
-                required: false
-            }).catch(() =>
-                false
-            ))))
+            .then(() => Promise.all(optional.map((name) => {
+                if(!IsString(name)) {
+                    return Promise.reject(`Invalid dependency: ${name} (expected string)`);
+                }
+
+                if(IsNil(Tasks[name])) {
+                    return Promise.reject(`Unknown dependency: ${name}`);
+                }
+
+                return Tasks[name](browser, environment, {
+                    required: false
+                }).catch(() =>
+                    false
+                );
+            })))
             // Start task
             .then(() => {
                 let promise = environment.tasks[name];
@@ -215,8 +238,11 @@ export function createRunner(task, defaultOptions) {
 }
 
 export function create({name, description, required, optional, command}, handler = null, defaultOptions = {}) {
+    let key = name.substring(0, name.indexOf(' ')) || name;
+
+    // Create task
     let task = createTask({
-        name: name.substring(0, name.indexOf(' ')) || name,
+        name: key,
 
         required,
         optional
@@ -235,6 +261,8 @@ export function create({name, description, required, optional, command}, handler
         .option('--environment <environment>', 'Environment [default: development]', Object.keys(Environments))
         .action(createRunner(task, defaultOptions));
 
-    // Return task reference
+    // Store task reference
+    Tasks[key] = task;
+
     return task;
 }

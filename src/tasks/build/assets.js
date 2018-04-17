@@ -5,7 +5,6 @@ import Mkdirp from 'mkdirp';
 import PadEnd from 'lodash/padEnd';
 import Path from 'path';
 
-import Clean from '../clean';
 import Copy from '../../core/copy';
 import {Task} from '../../core/helpers';
 
@@ -17,7 +16,7 @@ export const Assets = Task.create({
     description: 'Build extension assets.',
 
     required: [
-        Clean
+        'clean'
     ]
 }, function(log, browser, environment) {
     // Ensure output directory exists

@@ -17,7 +17,6 @@ import Pick from 'lodash/pick';
 import Reduce from 'lodash/reduce';
 import Uniq from 'lodash/uniq';
 
-import Clean from '../clean';
 import Json from '../../core/json';
 import {Task} from '../../core/helpers';
 import {sortKey} from '../../core/helpers/value';
@@ -255,7 +254,7 @@ export const CreditsTask = Task.create({
     description: 'Build extension credits.',
 
     required: [
-        Clean
+        'clean'
     ]
 }, (log, browser, environment) => {
     // Ensure output directory exists

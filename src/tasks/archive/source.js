@@ -1,7 +1,6 @@
 import Path from 'path';
 import Pick from 'lodash/pick';
 
-import Clean from '../clean';
 import Copy from '../../core/copy';
 import Json from '../../core/json';
 import {Task} from '../../core/helpers';
@@ -34,7 +33,7 @@ export const SourceArchiveTask = Task.create({
     description: 'Create source archive of the browser package.',
 
     required: [
-        Clean
+        'clean'
     ]
 }, (log, browser, environment) => {
     // Copy browser sources to the build directory

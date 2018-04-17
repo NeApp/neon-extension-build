@@ -10,7 +10,6 @@ import Reduce from 'lodash/reduce';
 import Util from 'util';
 import Webpack from 'webpack';
 
-import Clean from '../clean';
 import Validator from '../../webpack/validator';
 import {Task} from '../../core/helpers';
 import {createConfiguration} from '../../webpack';
@@ -93,7 +92,7 @@ export const Extension = Task.create({
     description: 'Build extension modules.',
 
     required: [
-        Clean
+        'clean'
     ]
 }, function(log, browser, environment) {
     // Construct compiler

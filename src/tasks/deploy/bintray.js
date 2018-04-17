@@ -1,7 +1,6 @@
 import Filesystem from 'fs-extra';
 import Path from 'path';
 
-import Clean from '../clean';
 import {Task} from '../../core/helpers';
 
 
@@ -62,7 +61,7 @@ export const Bintray = Task.create({
     description: 'Create bintray descriptor for the built extension.',
 
     required: [
-        Clean
+        'clean'
     ]
 }, (log, browser, environment) => {
     // Write bintray descriptor to file

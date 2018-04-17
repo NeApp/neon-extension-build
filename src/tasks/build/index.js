@@ -1,15 +1,8 @@
 import Filesystem from 'fs-extra';
 import Path from 'path';
 
-import Assets from './assets';
-import Credits from './credits';
-import Extension from './extension';
 import Import from '../../core/helpers/import';
-import Manifest from './manifest';
-import Bintray from '../deploy/bintray';
 import Checksum from '../../core/checksum';
-import ReleaseArchiveTask from '../archive/release';
-import SourceArchiveTask from '../archive/source';
 import {Task} from '../../core/helpers';
 
 
@@ -28,17 +21,17 @@ export const Build = Task.create({
     description: 'Build extension.',
 
     required: [
-        Assets,
-        Credits,
-        Extension,
-        Manifest,
+        'build:assets',
+        'build:credits',
+        'build:extension',
+        'build:manifest',
 
-        ReleaseArchiveTask,
-        SourceArchiveTask
+        'archive:release',
+        'archive:source'
     ],
 
     optional: [
-        Bintray
+        'deploy:bintray'
     ]
 }, (log, browser, environment) => {
     // Write checksums

@@ -9,8 +9,6 @@ import Pick from 'lodash/pick';
 import Remove from 'lodash/remove';
 import Uniq from 'lodash/uniq';
 
-import Clean from '../clean';
-import Extension from './extension';
 import {Task} from '../../core/helpers';
 
 
@@ -215,8 +213,8 @@ export const Manifest = Task.create({
     description: 'Build extension manifest.',
 
     required: [
-        Clean,
-        Extension
+        'clean',
+        'build:extension'
     ]
 }, function(log, browser, environment) {
     // Build manifest from modules
