@@ -91,7 +91,7 @@ function pushBranches(log, module, repository, remotes, commit, tag) {
             log.debug(`[${module.name}] Pushing ${tag} to "${branch}" on "${remote}"`);
 
             // Push branch to remote
-            return repository.push(remote, `${tag}:${branch}`);
+            return repository.push(remote, `+${tag}~0:refs/heads/${branch}`);
         }).then(() => {
             if(remotes.indexOf('neapp') < 0) {
                 return Promise.resolve();
