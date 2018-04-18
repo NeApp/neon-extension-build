@@ -4,12 +4,17 @@ import IsNil from 'lodash/isNil';
 import IsString from 'lodash/isString';
 import SemanticVersion from 'semver';
 import SimpleGit from 'simple-git/promise';
+import Travis from 'travis-ci';
 
 import {GithubApi} from '../../core/github';
 import {Task} from '../../core/helpers';
 import {getPackages} from './core/helpers';
 import {runSequential} from '../../core/helpers/promise';
 
+
+const travis = new Travis({
+    version: '2.0.0'
+});
 
 function getTargetBranches(tag) {
     return [
@@ -24,61 +29,143 @@ function getTargetBranches(tag) {
     ];
 }
 
-function hasTravisStatus(statuses) {
-    return !IsNil(Find(statuses, {
-        context: 'continuous-integration/travis-ci/push'
-    }));
-}
+function getTravisStatus(log, module, ref, options) {
+    options = {
+        createdAfter: null,
+        sha: null,
 
-function awaitBuild(log, module, ref, commit) {
+        delay: 5 * 1000,
+        retryAttempts: 6,
+        retryInterval: 10 * 1000,
+
+        ...(options || {})
+    };
+
     return new Promise((resolve, reject) => {
         let attempts = 0;
 
-        function next() {
+        function run() {
             attempts++;
 
-            // Retrieve status for `ref`
+            // Stop retrying after the maximum attempts have been reached
+            if(attempts > options.retryAttempts) {
+                reject(new Error(`Unable to retrieve the travis status for "${ref}" on ${module.name}`));
+                return;
+            }
+
+            log.debug(`[${module.name}] (GitHub) Fetching the status of "${ref}"...`);
+
+            // Retrieve combined status for `ref`
             GithubApi.repos.getCombinedStatusForRef({
                 owner: 'NeApp',
                 repo: module.name,
                 ref
-            }).then(({data}) => {
-                if(data.sha === commit && hasTravisStatus(data.statuses) && data.state !== 'pending') {
-                    resolve(data);
+            }).then(({data: {sha, statuses}}) => {
+                // Ensure status `sha` matches the provided `sha`
+                if(!IsNil(options.sha) && sha !== options.sha) {
+                    setTimeout(run, options.retryInterval);
                     return;
                 }
 
-                if(data.sha !== commit) {
-                    if(attempts > 6) {
-                        reject(new Error(`Commit doesn\'t exist for ${module.name} (after 1m)`));
-                        return;
-                    }
+                // Find travis status
+                let travis = Find(statuses, {
+                    context: 'continuous-integration/travis-ci/push'
+                });
 
-                    log.debug(`[${module.name}] Commit doesn\'t exist, found: ${data.sha}`);
-                } else if(!hasTravisStatus(data.statuses)) {
-                    if(attempts > 12) {
-                        reject(new Error(`Build wasn\'t created for ${module.name} (after 2m)`));
-                        return;
-                    }
-
-                    log.debug(`[${module.name}] Waiting for build to be created...`);
-                } else if(data.state === 'pending') {
-                    if(attempts > 60) {
-                        reject(new Error(`Build timeout for ${module.name} (after 10m)`));
-                        return;
-                    }
-
-                    log.debug(`[${module.name}] Waiting for build to complete...`);
+                if(IsNil(travis)) {
+                    setTimeout(run, options.retryInterval);
+                    return;
                 }
 
-                // Retry in 10 seconds
-                setTimeout(next, 10 * 1000);
+                // Ensure travis status was created after the provided timestamp
+                if(!IsNil(options.createdAfter) && Date.parse(travis['created_at']) < options.createdAfter) {
+                    setTimeout(run, options.retryInterval);
+                    return;
+                }
+
+                // Resolve with travis status
+                resolve(travis);
             });
         }
 
-        log.info(`[${module.name}] Building on Travis CI... (2 ~ 5 minutes)`);
+        log.debug(`[${module.name}] Waiting ${Math.round(options.delay / 1000)} seconds...`);
 
-        next();
+        setTimeout(run, options.delay);
+    });
+}
+
+function awaitTravisBuild(log, module, ref, id, options) {
+    options = {
+        retryAttempts: 40,
+        retryInterval: 15 * 1000,
+
+        ...(options || {})
+    };
+
+    return new Promise((resolve, reject) => {
+        let attempts = 0;
+
+        function run() {
+            attempts++;
+
+            if(attempts === 2) {
+                log.info(`[${module.name}] Building "${ref}" on Travis CI... (2 ~ 5 minutes)`);
+            }
+
+            // Stop retrying after the maximum attempts have been reached
+            if(attempts > options.retryAttempts) {
+                reject(new Error(`Build timeout for "${id}"`));
+                return;
+            }
+
+            log.debug(`[${module.name}] (Travis CI) Fetching the state of build ${id}...`);
+
+            // Retrieve build details for `id`
+            travis.builds(id).get((err, res) => {
+                if(err) {
+                    reject(err);
+                    return;
+                }
+
+                let {build, commit} = res;
+
+                // Ensure the correct build was returned
+                if(commit['branch'] !== ref) {
+                    reject(new Error(`Incorrect build selected (expected: ${ref}, found: ${commit['branch']})`));
+                    return;
+                }
+
+                log.debug(`[${module.name}] (Travis CI) State: ${build['state']}`);
+
+                // Ensure build has finished
+                if(['created', 'started'].indexOf(build['state']) >= 0) {
+                    setTimeout(run, options.retryInterval);
+                    return;
+                }
+
+                // Resolve with final state
+                resolve(build['state']);
+            });
+        }
+
+        run();
+    });
+}
+
+function awaitBuild(log, module, ref, options) {
+    // Retrieve travis status for `ref`
+    return getTravisStatus(log, module, ref, options).then((status) => {
+        let parameters = /https:\/\/travis-ci\.org\/.*?\/.*?\/builds\/(\d+)/.exec(status['target_url']);
+
+        // Ensure parameters are valid
+        if(IsNil(parameters) || parameters.length !== 2) {
+            return Promise.reject(new Error(
+                `Unknown travis status "target_url": "${status['target_url']}"`
+            ));
+        }
+
+        // Await travis build to complete
+        return awaitTravisBuild(log, module, ref, parameters[1]);
     });
 }
 
@@ -87,18 +174,35 @@ function pushBranches(log, module, repository, remotes, commit, tag) {
 
     // Push each branch to remote(s), and await build to complete
     return runSequential(branches, (branch) => {
-        return runSequential(remotes, (remote) => {
-            log.debug(`[${module.name}] Pushing ${tag} to "${branch}" on "${remote}"`);
+        let startedAt = null;
 
-            // Push branch to remote
-            return repository.push(remote, `+${tag}~0:refs/heads/${branch}`);
+        return runSequential(remotes, (remote) => {
+            // Retrieve current remote commit (from local)
+            return repository.revparse(`${remote}/${branch}`).catch(() => null).then((currentCommit) => {
+                if(!IsNil(currentCommit) && currentCommit.trim() === commit) {
+                    log.debug(`[${module.name}] ${tag} has already been pushed to "${branch}" on "${remote}"`);
+                    return Promise.resolve();
+                }
+
+                log.debug(`[${module.name}] Pushing ${tag} to "${branch}" on "${remote}"`);
+
+                if(remote === 'neapp') {
+                    startedAt = Date.now();
+                }
+
+                // Push branch to remote
+                return repository.push(remote, `+${tag}~0:refs/heads/${branch}`);
+            });
         }).then(() => {
-            if(remotes.indexOf('neapp') < 0) {
+            if(IsNil(startedAt) || remotes.indexOf('neapp') < 0) {
                 return Promise.resolve();
             }
 
             // Wait for build to complete
-            return awaitBuild(log, module, branch, commit).then(({state}) => {
+            return awaitBuild(log, module, branch, {
+                sha: commit,
+                createdAfter: startedAt
+            }).then((state) => {
                 if(state === 'failure') {
                     return Promise.reject(new Error(
                         `Build failed for ${module.name}#${branch}`
@@ -124,7 +228,12 @@ function pushTag(log, module, repository, remotes, commit, tag) {
         }
 
         // Wait for build to complete
-        return awaitBuild(log, module, tag, commit).then(({state}) => {
+        return awaitBuild(log, module, tag, {
+            sha: commit,
+
+            // Wait 15s before the first status request (hopefully enough time for the status to be updated)
+            delay: 15 * 1000
+        }).then((state) => {
             if(state === 'failure') {
                 return Promise.reject(new Error(
                     `Build failed for ${module.name}#${tag}`
