@@ -197,11 +197,12 @@ export function createRunner(task, defaultOptions) {
         }
 
         // Run task for each browser
-        return Browser.resolve(options['package-dir'], options.browser).catch((err) => {
-            Logger.error(`Unable to resolve browser(s): ${err.stack || err.message || err}`);
-            return Promise.reject(err);
-        }).then((browsers) =>
-            runSequential(browsers, (browser) => {
+        return runSequential(Browser.getBrowsers(options.browser), (name) =>
+            // Resolve browser
+            Browser.resolve(options['package-dir'], name).catch((err) => {
+                Logger.error(`Unable to resolve browser(s): ${err.stack || err.message || err}`);
+                return Promise.reject(err);
+            }).then((browser) => {
                 // Try create new build environment
                 let environment;
 

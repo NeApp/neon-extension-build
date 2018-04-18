@@ -46,7 +46,19 @@ function resolveFeatures(features) {
     }, features);
 }
 
-function resolveBrowser(packageDir, browser) {
+export function getBrowsers(name) {
+    if(name === 'all') {
+        return Object.values(Browsers);
+    }
+
+    if(!IsNil(Browsers[name])) {
+        return [Browsers[name]];
+    }
+
+    throw new Error(`Invalid browser: "${name}"`);
+}
+
+export function resolve(packageDir, browser) {
     return Promise.resolve(CloneDeep(browser))
         .then((browser) => ({
             ...browser,
@@ -67,23 +79,7 @@ function resolveBrowser(packageDir, browser) {
         }));
 }
 
-export function resolve(packageDir, name) {
-    let browsers;
-
-    if(name === 'all') {
-        browsers = Object.values(Browsers);
-    } else if(!IsNil(Browsers[name])) {
-        browsers = [Browsers[name]];
-    } else {
-        throw new Error(`Invalid browser: "${name}"`);
-    }
-
-    // Resolve browsers
-    return Promise.all(browsers.map((browser) =>
-        resolveBrowser(packageDir, browser)
-    ));
-}
-
 export default {
+    getBrowsers,
     resolve
 };
