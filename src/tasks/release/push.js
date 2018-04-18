@@ -163,7 +163,9 @@ function pushRelease(log, browser, remotes) {
             }
 
             // Resolve version commit sha
-            return repository.revparse(tag).then((commit) => {
+            return repository.revparse(`${tag}~0`).then((commit) => {
+                commit = commit.trim();
+
                 log.debug(`[${module.name}] Pushing ${tag} (${commit}) to remotes: ${remotes.join(', ')}`);
 
                 // Push release to remote(s)
