@@ -119,19 +119,21 @@ function updateContributors(log, browser, options) {
     });
 }
 
-function updatePackageDependencies(versions, pkg, key, caret = false) {
-    if(IsNil(pkg[key])) {
-        return;
+function updatePackageDependenciesGroup(group, versions, pkg) {
+    if(IsNil(pkg[group])) {
+        return false;
     }
 
     // Remove empty dependencies
-    if(Object.keys(pkg[key]).length < 1) {
-        delete pkg[key];
-        return;
+    if(Object.keys(pkg[group]).length < 1) {
+        delete pkg[group];
+        return false;
     }
 
     // Update dependencies
-    pkg[key] = MapValues(pkg[key], (version, name) => {
+    let changed = false;
+
+    pkg[group] = MapValues(pkg[group], (version, name) => {
         if(name.indexOf('neon-extension-') < 0) {
             return version;
         }
@@ -140,12 +142,37 @@ function updatePackageDependencies(versions, pkg, key, caret = false) {
             throw new Error(`Unknown dependency: ${name}`);
         }
 
-        if(caret) {
-            return `^${versions[name]}`;
+        // Retrieve current version
+        let current = versions[name];
+
+        if(group === 'peerDependencies') {
+            current = `^${versions[name]}`;
         }
 
-        return versions[name];
+        // Ensure version has changed
+        if(current === version) {
+            return current;
+        }
+
+        // Mark dependency group as changed
+        changed = true;
+
+        // Update version
+        return current;
     });
+
+    return changed;
+}
+
+function updatePackageDependencies(versions, pkg) {
+    let changed = false;
+
+    // Update each dependency group
+    ['dependencies', 'devDependencies', 'peerDependencies'].forEach((group) => {
+        changed = updatePackageDependenciesGroup(group, versions, pkg) || changed;
+    });
+
+    return changed;
 }
 
 function updatePackages(log, browser, version, options) {
@@ -188,8 +215,15 @@ function updatePackages(log, browser, version, options) {
             ));
         }
 
+        // Update dependencies
+        let dependenciesChanged = updatePackageDependencies(versions, pkg);
+
+        if(dependenciesChanged) {
+            log.debug(`[${module.name}] Dependencies changed`);
+        }
+
         // Only create patch releases on modules with changes
-        if(module.repository.ahead > 0 || !isPatchRelease(pkg.version, version)) {
+        if(dependenciesChanged || module.repository.ahead > 0 || !isPatchRelease(pkg.version, version)) {
             // Ensure version has been incremented
             if(SemanticVersion.lte(version, pkg.version)) {
                 if(!options.force) {
@@ -219,15 +253,6 @@ function updatePackages(log, browser, version, options) {
             // Store module version
             versions[module.name] = pkg.version;
         }
-
-        // Update dependencies
-        updatePackageDependencies(versions, pkg, 'dependencies');
-
-        // Update development dependencies
-        updatePackageDependencies(versions, pkg, 'devDependencies');
-
-        // Update peer dependencies
-        updatePackageDependencies(versions, pkg, 'peerDependencies', true);
 
         // Read package metadata from file (to determine the current EOL character)
         let path = Path.join(module.path, 'package.json');
