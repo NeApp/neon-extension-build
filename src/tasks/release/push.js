@@ -8,6 +8,7 @@ import Travis from 'travis-ci';
 
 import {GithubApi} from '../../core/github';
 import {Task} from '../../core/helpers';
+import {createRelease, updatePackageRelease} from './core/release';
 import {getPackages} from './core/helpers';
 import {runSequential} from '../../core/helpers/promise';
 
@@ -217,6 +218,7 @@ function pushBranches(log, module, repository, remotes, commit, tag) {
 }
 
 function pushTag(log, module, repository, remotes, commit, tag) {
+    // Push tag to remote
     return runSequential(remotes, (remote) => {
         log.debug(`[${module.name}] Pushing ${tag} tag to "${remote}"`);
 
@@ -240,8 +242,8 @@ function pushTag(log, module, repository, remotes, commit, tag) {
                 ));
             }
 
-            // Build successful
-            return Promise.resolve();
+            // Create release on GitHub
+            return createRelease(log, module, repository, tag);
         });
     });
 }
@@ -255,7 +257,11 @@ function pushRelease(log, browser, remotes) {
         return Promise.reject(`Invalid remote: ${remotes}`);
     }
 
-    return runSequential(getPackages(browser), (module) => {
+    let modules = getPackages(browser);
+    let pushed = {};
+
+    // Push release for each module
+    return runSequential(modules, (module) => {
         let repository = SimpleGit(module.path).silent(true);
 
         log.debug(`[${module.name}] Pushing to remotes: ${remotes.join(', ')}`);
@@ -286,10 +292,35 @@ function pushRelease(log, browser, remotes) {
                     // Log result
                     .then(() => {
                         log.info(Chalk.green(`[${module.name}] Pushed ${tag} to: ${remotes.join(', ')}`));
+
+                        // Mark module as pushed
+                        pushed[module.name] = true;
                     });
             });
         }, () => {
             log.debug(`[${module.name}] No release available to push`);
+        });
+    }).then(() => {
+        if(pushed[browser.extension.name] !== true) {
+            log.debug(`[${browser.extension.name}] No release pushed, ignoring the generation of release notes`);
+            return Promise.resolve();
+        }
+
+        let repository = SimpleGit(browser.extension.path).silent(true);
+
+        // Retrieve current version
+        return repository.raw(['describe', '--abbrev=0', '--match=v*', '--tags', '--exact-match']).then((tag) => {
+            tag = tag.trim();
+
+            // Validate version
+            if(tag.length < 1 || tag.indexOf('v') !== 0 || !SemanticVersion.valid(tag)) {
+                return Promise.reject(new Error(
+                    `Unable to push release, ${browser.extension.name} has an invalid version tag: ${tag}`
+                ));
+            }
+
+            // Update package release
+            return updatePackageRelease(log, browser.extension, repository, modules, tag);
         });
     });
 }
