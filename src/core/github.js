@@ -1,8 +1,20 @@
 import Https from 'https';
 import Octokit from '@octokit/rest';
+import Process from 'process';
+
+import Vorpal from './vorpal';
 
 
 export const GithubApi = Octokit();
+
+if(Process.env['GITHUB_TOKEN']) {
+    Vorpal.logger.info('Github: Authenticated');
+
+    GithubApi.authenticate({
+        type: 'token',
+        token: Process.env['GITHUB_TOKEN']
+    });
+}
 
 export function exists(name, branch) {
     return new Promise((resolve, reject) => {
