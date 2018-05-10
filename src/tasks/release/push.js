@@ -282,7 +282,9 @@ function pushRelease(log, browser, remotes) {
             let moduleRepository = SimpleGit(module.path).silent(true);
 
             // Retrieve current version
-            return moduleRepository.raw(['describe', '--abbrev=0', '--match=v*', '--tags', '--exact-match']).then((moduleTag) => {
+            return moduleRepository.raw([
+                'describe', '--abbrev=0', '--match=v*', '--tags', '--exact-match'
+            ]).then((moduleTag) => {
                 moduleTag = moduleTag.trim();
 
                 // Ignore modules with no release matching the `tag`
