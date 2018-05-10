@@ -23,9 +23,7 @@ function extractReleaseNotes(message) {
     let notes = NotesRegex.exec(message);
 
     if(IsNil(notes)) {
-        throw new Error(
-            `Unable to find release notes for ${module.name}`
-        );
+        return '';
     }
 
     return notes[0];
@@ -37,6 +35,10 @@ function getReleaseNotes(module, tag) {
         repo: module.name,
         tag
     }).then(({data}) => {
+        if(IsNil(data.body)) {
+            return null;
+        }
+
         return (
             `### [${module.name}](https://github.com/NeApp/${module.name}/releases/tag/${tag})\n\n` +
             `${data.body}`
@@ -47,9 +49,13 @@ function getReleaseNotes(module, tag) {
 }
 
 function getReleaseNotesForModules(modules, tag) {
-    return runSequential(modules, (module) =>
-        getReleaseNotes(module, tag)
-    );
+    return runSequential(modules, (module) => {
+        if(module.type === 'package') {
+            return Promise.resolve(null);
+        }
+
+        return getReleaseNotes(module, tag);
+    });
 }
 
 function openEditor(module, notes) {
@@ -88,12 +94,9 @@ export function createRelease(log, module, repository, tag) {
         // Retrieve tag message
         return repository.tag(['-l', '--format="%(contents)"', tag])
             // Extract release notes from tag message
-            .then((message) => {
-                let notes = extractReleaseNotes(message);
-
-                // Update group titles
-                return notes.replace(GroupTitleRegex, '**$1**\n\n');
-            })
+            .then((message) =>
+                extractReleaseNotes(message).replace(GroupTitleRegex, '**$1**\n\n')
+            )
             // Open editor (to allow the editing of release notes)
             .then((notes) => openEditor(module, notes))
             // Create release
@@ -102,7 +105,6 @@ export function createRelease(log, module, repository, tag) {
                 'repo': module.name,
 
                 'tag_name': tag,
-                'target_commitish': tag,
                 'prerelease': !IsNil(SemanticVersion.prerelease(tag)),
 
                 'name': tag,
@@ -126,7 +128,7 @@ export function updatePackageRelease(log, extension, repository, modules, tag) {
                 extractReleaseNotes(message).replace(GroupTitleRegex, '**$1**\n\n')
             )
             // Retrieve release notes for modules
-            .then((notes) => getReleaseNotesForModules(modules).then((moduleNotes) => {
+            .then((notes) => getReleaseNotesForModules(modules, tag).then((moduleNotes) => {
                 Remove(moduleNotes, IsNil);
 
                 return notes.concat(...moduleNotes);
@@ -138,16 +140,15 @@ export function updatePackageRelease(log, extension, repository, modules, tag) {
                 'id': data.id,
 
                 'owner': 'NeApp',
-                'repo': module.name,
+                'repo': extension.name,
 
                 'tag_name': tag,
-                'target_commitish': tag,
                 'prerelease': !IsNil(SemanticVersion.prerelease(tag)),
 
                 'name': tag,
                 'body': notes
             }).then(() => {
-                log.info(Chalk.green(`[${extension.name}] Created release: ${tag}`));
+                log.info(Chalk.green(`[${extension.name}] Updated release: ${tag}`));
             }));
     }, (err) => {
         let details;

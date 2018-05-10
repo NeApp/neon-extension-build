@@ -243,7 +243,11 @@ function pushTag(log, module, repository, remotes, commit, tag) {
             }
 
             // Create release on GitHub
-            return createRelease(log, module, repository, tag);
+            if(module.type !== 'package') {
+                return createRelease(log, module, repository, tag);
+            }
+
+            return Promise.resolve();
         });
     });
 }
@@ -257,66 +261,62 @@ function pushRelease(log, browser, remotes) {
         return Promise.reject(`Invalid remote: ${remotes}`);
     }
 
+    let repository = SimpleGit(browser.extension.path).silent(true);
+
     let modules = getPackages(browser);
     let pushed = {};
 
-    // Push release for each module
-    return runSequential(modules, (module) => {
-        let repository = SimpleGit(module.path).silent(true);
+    // Retrieve current version
+    return repository.raw(['describe', '--abbrev=0', '--match=v*', '--tags', '--exact-match']).then((tag) => {
+        tag = tag.trim();
 
-        log.debug(`[${module.name}] Pushing to remotes: ${remotes.join(', ')}`);
-
-        // Retrieve current version
-        return repository.raw(['describe', '--abbrev=0', '--match=v*', '--tags', '--exact-match']).then((tag) => {
-            tag = tag.trim();
-
-            // Validate version
-            if(tag.length < 1 || tag.indexOf('v') !== 0 || !SemanticVersion.valid(tag)) {
-                return Promise.reject(new Error(
-                    `Unable to push release, ${module.name} has an invalid version tag: ${tag}`
-                ));
-            }
-
-            // Resolve version commit sha
-            return repository.revparse(`${tag}~0`).then((commit) => {
-                commit = commit.trim();
-
-                log.debug(`[${module.name}] Pushing ${tag} (${commit}) to remotes: ${remotes.join(', ')}`);
-
-                // Push release to remote(s)
-                return Promise.resolve()
-                    // Push branches to remote(s)
-                    .then(() => pushBranches(log, module, repository, remotes, commit, tag))
-                    // Push tag to remote(s)
-                    .then(() => pushTag(log, module, repository, remotes, commit, tag))
-                    // Log result
-                    .then(() => {
-                        log.info(Chalk.green(`[${module.name}] Pushed ${tag} to: ${remotes.join(', ')}`));
-
-                        // Mark module as pushed
-                        pushed[module.name] = true;
-                    });
-            });
-        }, () => {
-            log.debug(`[${module.name}] No release available to push`);
-        });
-    }).then(() => {
-        if(pushed[browser.extension.name] !== true) {
-            log.debug(`[${browser.extension.name}] No release pushed, ignoring the generation of release notes`);
-            return Promise.resolve();
+        // Validate version
+        if(tag.length < 1 || tag.indexOf('v') !== 0 || !SemanticVersion.valid(tag)) {
+            return Promise.reject(new Error(
+                `Unable to push release, ${browser.extension.name} has an invalid version tag: ${tag}`
+            ));
         }
 
-        let repository = SimpleGit(browser.extension.path).silent(true);
+        // Push release for each module
+        return runSequential(modules, (module) => {
+            let moduleRepository = SimpleGit(module.path).silent(true);
 
-        // Retrieve current version
-        return repository.raw(['describe', '--abbrev=0', '--match=v*', '--tags', '--exact-match']).then((tag) => {
-            tag = tag.trim();
+            // Retrieve current version
+            return moduleRepository.raw(['describe', '--abbrev=0', '--match=v*', '--tags', '--exact-match']).then((moduleTag) => {
+                moduleTag = moduleTag.trim();
 
-            // Validate version
-            if(tag.length < 1 || tag.indexOf('v') !== 0 || !SemanticVersion.valid(tag)) {
-                return Promise.reject(new Error(
-                    `Unable to push release, ${browser.extension.name} has an invalid version tag: ${tag}`
-                ));
+                // Ignore modules with no release matching the `tag`
+                if(moduleTag !== tag) {
+                    return Promise.resolve();
+                }
+
+                // Resolve version commit sha
+                return moduleRepository.revparse(`${tag}~0`).then((commit) => {
+                    commit = commit.trim();
+
+                    log.debug(`[${module.name}] Pushing ${tag} (${commit}) to remotes: ${remotes.join(', ')}`);
+
+                    // Push release to remote(s)
+                    return Promise.resolve()
+                    // Push branches to remote(s)
+                        .then(() => pushBranches(log, module, moduleRepository, remotes, commit, tag))
+                        // Push tag to remote(s)
+                        .then(() => pushTag(log, module, moduleRepository, remotes, commit, tag))
+                        // Log result
+                        .then(() => {
+                            log.info(Chalk.green(`[${module.name}] Pushed ${tag} to: ${remotes.join(', ')}`));
+
+                            // Mark module as pushed
+                            pushed[module.name] = true;
+                        });
+                });
+            }, () => {
+                log.debug(`[${module.name}] No release available to push`);
+            });
+        }).then(() => {
+            if(pushed[browser.extension.name] !== true) {
+                log.debug(`[${browser.extension.name}] No release pushed, ignoring the generation of release notes`);
+                return Promise.resolve();
             }
 
             // Update package release
