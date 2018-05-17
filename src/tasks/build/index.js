@@ -24,6 +24,7 @@ export const Build = Task.create({
         'build:assets',
         'build:credits',
         'build:extension',
+        'build:locales',
         'build:manifest',
 
         'archive:release',

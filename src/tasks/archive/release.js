@@ -11,6 +11,7 @@ export const ReleaseArchiveTask = Task.create({
     required: [
         'build:assets',
         'build:extension',
+        'build:locales',
         'build:manifest'
     ]
 }, (log, browser, environment) => {
