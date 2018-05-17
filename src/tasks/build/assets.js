@@ -43,11 +43,11 @@ export const Assets = Task.create({
         // Copy module assets to build directory
         return Copy(Pattern, src, dest).then((files) => {
             log.info(Chalk.green(
-                `[${PadEnd(module.name, 35)}] Copied ${files.length} asset(s)`
+                `[${PadEnd(module.name, 40)}] Copied ${files.length} asset(s)`
             ));
         }, (err) => {
             log.info(Chalk.red(
-                `[${PadEnd(module.name, 35)}] Unable to copy assets: ${err.message}`
+                `[${PadEnd(module.name, 40)}] Unable to copy assets: ${err.message}`
             ));
             return Promise.reject(err);
         });

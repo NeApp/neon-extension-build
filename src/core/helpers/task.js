@@ -45,7 +45,7 @@ function getModuleColour({repository}) {
 
 function createLogger(prefix, name) {
     function log(target, message) {
-        target(`${prefix}(${Chalk.cyan(name)}) ${message}`);
+        target(`${prefix}(${Chalk.cyan(PadEnd(name, 14))}) ${message}`);
     }
 
     return {
