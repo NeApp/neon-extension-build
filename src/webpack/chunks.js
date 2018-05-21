@@ -247,16 +247,21 @@ export function createChunks(browser, environment) {
         ],
 
         //
-        // Configuration
+        // Application
         //
 
-        'configuration/configuration': [
+        'application': [
             // Ensure CSS Dependencies are bundled first
-            'neon-extension-core/modules/configuration/dependencies.scss',
+            'neon-extension-core/App/App.Dependencies.scss',
 
+            // Include common modules
             ...browser.webpack.common,
+
+            // Include configuration services
             ...getServices(modules, 'configuration', { includeComponents: true }),
-            'neon-extension-core/modules/configuration'
+
+            // Bootstrap
+            'neon-extension-core/App'
         ],
 
         //

@@ -506,7 +506,7 @@ export function createConfiguration(browser, environment) {
                     'destination/common',
                     'source/common',
 
-                    'configuration/configuration'
+                    'application'
                 ],
 
                 minChunks: (module, count) => shouldExtractModule(browser, environment, module, count, {
