@@ -3,23 +3,47 @@ import Filesystem from 'fs';
 import Filter from 'lodash/filter';
 import ForEach from 'lodash/forEach';
 import IsNil from 'lodash/isNil';
+import IsString from 'lodash/isString';
+import Map from 'lodash/map';
 import Merge from 'lodash/merge';
 import Path from 'path';
 import SortBy from 'lodash/sortBy';
 
 import Vorpal from '../core/vorpal';
-import {isDirectory, resolvePath} from '../core/helpers/path';
+import {capitalize} from '../core/helpers/value';
+import {resolvePath} from '../core/helpers/path';
 
 
 const Logger = Vorpal.logger;
 
-function getServices(modules, type, options) {
+function parseServiceId(id) {
+    let parts = id.split('/');
+
+    let name = null;
+    let type = null;
+
+    if(parts.length === 1) {
+        name = parts[0];
+    } else if(parts.length === 2) {
+        name = parts[1];
+        type = parts[0];
+    } else {
+        throw new Error(`Invalid service identifier: "${id}"`);
+    }
+
+    return {
+        name: capitalize(name),
+        type: capitalize(type)
+    };
+}
+
+function getServices(modules, id, options) {
     options = Merge({
         includeComponents: false
     }, options);
 
-    // Build service name
-    let name = type.substring(type.indexOf('/') + 1);
+    // Parse service identifier
+    let {name} = parseServiceId(id);
 
     // Find matching services
     let items = [];
@@ -31,35 +55,30 @@ function getServices(modules, type, options) {
         }
 
         // Ensure module has the specified service
-        if(module.services.indexOf(type) === -1) {
+        if(module.services.indexOf(id) === -1) {
             return;
         }
 
-        // Build service directory path
-        let serviceBasePath = Path.resolve(module.path, `src/services/${name}`);
-
         // Resolve service path
         let servicePath = resolvePath([
-            Path.resolve(serviceBasePath, 'index.js'),
-            `${serviceBasePath}.js`
+            Path.resolve(module.path, `src/Services/${name}/${name}.js`),
+            Path.resolve(module.path, `src/Services/${name}.js`)
         ]);
 
         if(IsNil(servicePath)) {
-            Logger.error(Chalk.red(`Unable to find "${name}" service for module "${module.name}"`));
+            Logger.error(Chalk.red(`Unable to find "${name}" service for "${module.name}"`));
             return;
         }
 
         // Include service
         items.push(servicePath);
 
-        // Include react components (if enabled)
-        if(isDirectory(serviceBasePath) && options.includeComponents) {
-            let componentsPath = Path.resolve(serviceBasePath, 'components/index.js');
+        // Include components (if enabled)
+        // TODO Scan directory, and include components individually
+        let componentsPath = Path.resolve(module.path, `src/Components/${name}/index.js`);
 
-            // Ensure service components exist
-            if(Filesystem.existsSync(componentsPath)) {
-                items.push(componentsPath);
-            }
+        if(Filesystem.existsSync(componentsPath) && options.includeComponents) {
+            items.push(componentsPath);
         }
     });
 
@@ -75,51 +94,49 @@ function getModuleServices(browser, environment, module) {
         return [];
     }
 
-    // Retrieve core module
-    let coreModule = browser.modules['neon-extension-core'];
+    // Retrieve framework module
+    let framework = browser.modules['neon-extension-framework'];
 
     // Find module services
     let items = [];
 
     for(let i = 0; i < module.services.length; i++) {
-        let type = module.services[i];
+        let id = module.services[i];
 
-        // Ignore migrate service
-        if(type === 'migrate') {
+        // Parse service identifier
+        let {name, type} = parseServiceId(id);
+
+        // Ignore migration service
+        if(name === 'Migrate') {
             continue;
         }
 
-        // Build service name
-        let name = type.substring(type.indexOf('/') + 1);
-
-        // Build service directory path
-        let serviceBasePath = Path.resolve(module.path, `src/services/${name}`);
-
         // Resolve service path
         let servicePath = resolvePath([
-            Path.resolve(serviceBasePath, 'index.js'),
-            `${serviceBasePath}.js`
+            Path.resolve(module.path, `src/Services/${name}/${name}.js`),
+            Path.resolve(module.path, `src/Services/${name}.js`)
         ]);
 
         if(IsNil(servicePath)) {
-            Logger.error(Chalk.red(`Unable to find "${name}" service for module "${module.name}"`));
+            Logger.error(Chalk.red(`Unable to find "${name}" service for "${module.name}"`));
             continue;
         }
 
         // Only include the plugin configuration service
-        if(type === 'configuration') {
+        if(name === 'Configuration') {
             items.push(servicePath);
             continue;
         }
 
-        // Build main module path
-        let mainPath = Path.resolve(coreModule.path, `src/modules/${type}/index.js`);
+        // Resolve bootstrap path
+        let mainPath = resolvePath([
+            Path.resolve(framework.path, `src/Bootstrap/${type}/${name}/${name}.js`),
+            Path.resolve(framework.path, `src/Bootstrap/${type}/${name}.js`)
+        ]);
 
-        // Ensure main module exists
-        if(!Filesystem.existsSync(mainPath)) {
+        if(IsNil(mainPath)) {
             Logger.error(Chalk.red(
-                `Ignoring service "${name}" for module "${module.name}", ` +
-                `unable to find main module at: "${mainPath}"`
+                `Unable to find "${type}/${name}" bootstrap module for the "${name}" service`
             ));
             continue;
         }
@@ -133,32 +150,16 @@ function getModuleServices(browser, environment, module) {
 }
 
 function createModule(browser, environment, module) {
-    // Parse module name
-    let moduleName = module.name.replace('neon-extension-', '');
-    let splitAt = moduleName.indexOf('-');
-
-    if(splitAt < 0) {
-        Logger.error(Chalk.red(`Invalid value provided for the "module.name" parameter: ${module.name}`));
-        return null;
-    }
-
-    let type = moduleName.substring(0, splitAt);
-    let plugin = moduleName.substring(splitAt + 1);
-
-    // Build module entry
-    let result = {};
-
-    result[`${type}/${plugin}/${plugin}`] = [
-        ...browser.webpack.common,
-        ...getServices([browser.modules['neon-extension-core']], 'configuration'),
-        ...getModuleServices(browser, environment, module)
-    ];
-
-    return result;
+    return {
+        [`Modules/${module.name}/Main`]: [
+            ...browser.webpack.common,
+            ...getServices([browser.modules['neon-extension-core']], 'configuration'),
+            ...getModuleServices(browser, environment, module)
+        ]
+    };
 }
 
 function createModuleChunks(browser, module) {
-    // Validate `module` object
     if(typeof module === 'undefined' || module === null) {
         Logger.error(Chalk.red(`Invalid value provided for the "module" parameter: ${module}`));
         return null;
@@ -169,32 +170,34 @@ function createModuleChunks(browser, module) {
         return null;
     }
 
-    // Parse module name
-    let moduleName = module.name.replace('neon-extension-', '');
-    let splitAt = moduleName.indexOf('-');
-
-    if(splitAt < 0) {
-        Logger.error(Chalk.red(`Invalid value provided for the "module.name" parameter: ${module.name}`));
+    if(!IsNil(module.webpack.chunks)) {
+        Logger.error(Chalk.red(`Unsupported option "webpack.chunks" found for ${module.name}`));
         return null;
     }
-
-    let type = moduleName.substring(0, splitAt);
-    let plugin = moduleName.substring(splitAt + 1);
 
     // Create module chunks
     let result = {};
 
-    (module.webpack.chunks || []).forEach((name) => {
-        result[`${type}/${plugin}/${name}/${name}`] = [
-            ...browser.webpack.common,
-            `${module.name}/${name}`
-        ];
-    });
+    ForEach(module.webpack.modules || {}, ({ modules }, name) => {
+        if(!IsString(name) || name.length < 1) {
+            Logger.warn(Chalk.yellow(`Ignoring module with an invalid name "${name}" for ${module.name}`));
+            return;
+        }
 
-    (module.webpack.modules || []).forEach((name) => {
-        result[`${type}/${plugin}/${name}/${name}`] = [
+        // Ensure an array of modules have been provided
+        if(!Array.isArray(modules) || modules.length < 1) {
+            Logger.warn(Chalk.yellow(`Ignoring invalid module definition "${name}" for ${module.name}`));
+            return;
+        }
+
+        // Create module
+        result[`Modules/${module.name}/${name}`] = [
             ...browser.webpack.common,
-            `${module.name}/${name}`
+
+            // Include modules (with module prefix)
+            ...Map(modules, (name) =>
+                Path.resolve(module.path, `src/${name}`)
+            )
         ];
     });
 
@@ -208,49 +211,59 @@ export function createChunks(browser, environment) {
 
     // Create modules
     return {
-        'background/main/main': [
+        'Background/Messaging': [
             ...browser.webpack.common,
             ...getServices(modules, 'configuration'),
-            'neon-extension-core/modules/background/main'
+
+            'neon-extension-core/Messaging'
         ],
-        'background/migrate/migrate': [
+
+        //
+        // Services
+        //
+
+        'Background/Services/App': [
+            ...browser.webpack.common,
+            ...getServices(modules, 'configuration'),
+
+            'neon-extension-core/Services/App'
+        ],
+
+        'Background/Services/ContentScript': [
+            ...browser.webpack.common,
+            ...getServices(modules, 'configuration'),
+
+            'neon-extension-core/Services/ContentScript'
+        ],
+
+        'Background/Services/Library': [
+            ...browser.webpack.common,
+            ...getServices(modules, 'configuration'),
+
+            'neon-extension-core/Services/Library'
+        ],
+
+        'Background/Services/Migrate': [
             ...browser.webpack.common,
             ...getServices(modules, 'configuration'),
             ...getServices(modules, 'migrate'),
-            'neon-extension-core/modules/background/migrate'
+
+            'neon-extension-core/Services/Migrate'
         ],
 
-        //
-        // Messaging
-        //
-
-        'background/messaging/messaging': [
-            ...browser.webpack.common,
-            ...getServices(modules, 'configuration'),
-            'neon-extension-core/modules/background/messaging'
-        ],
-        'background/messaging/services/contentScript': [
-            ...browser.webpack.common,
-            ...getServices(modules, 'configuration'),
-            'neon-extension-core/modules/background/messaging/services/contentScript'
-        ],
-        'background/messaging/services/library': [
-            ...browser.webpack.common,
-            ...getServices(modules, 'configuration'),
-            'neon-extension-core/modules/background/messaging/services/library'
-        ],
-        'background/messaging/services/scrobble': [
+        'Background/Services/Scrobble': [
             ...browser.webpack.common,
             ...getServices(modules, 'configuration'),
             ...getServices(destinations, 'destination/scrobble'),
-            'neon-extension-core/modules/background/messaging/services/scrobble'
+
+            'neon-extension-core/Services/Scrobble'
         ],
 
         //
         // Application
         //
 
-        'application': [
+        'Application': [
             // Ensure CSS Dependencies are bundled first
             'neon-extension-core/App/App.Dependencies.scss',
 

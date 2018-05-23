@@ -3,6 +3,7 @@ import ForEach from 'lodash/forEach';
 import IsNil from 'lodash/isNil';
 import IsPlainObject from 'lodash/isPlainObject';
 import KeyBy from 'lodash/keyBy';
+import MapValues from 'lodash/mapValues';
 import Merge from 'lodash/merge';
 import Omit from 'lodash/omit';
 import Path from 'path';
@@ -109,8 +110,7 @@ function parseModuleManifest(extension, data) {
         'webpack': {
             'alias': [],
             'babel': [],
-            'chunks': [],
-            'modules': []
+            'modules': {}
         }
     }, data);
 
@@ -124,6 +124,24 @@ function parseModuleManifest(extension, data) {
 
     // Remove duplicate permissions
     manifest.permissions = Uniq(manifest.permissions);
+
+    // Parse webpack modules
+    manifest.webpack.modules = MapValues(manifest.webpack.modules, (value, name) => {
+        let options = {};
+
+        if(Array.isArray(value)) {
+            options = { modules: value };
+        } else if(IsPlainObject(value)) {
+            options = value;
+        }
+
+        return {
+            entry: false,
+            modules: [name],
+
+            ...options
+        };
+    });
 
     return manifest;
 }

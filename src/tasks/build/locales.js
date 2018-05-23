@@ -44,7 +44,7 @@ export const Locales = Task.create({
         'clean'
     ]
 }, function(log, browser, environment) {
-    let destinationPath = Path.join(environment.outputPath, 'locales');
+    let destinationPath = Path.join(environment.outputPath, 'Locales');
 
     // Ensure output directory exists
     Mkdirp.sync(destinationPath);

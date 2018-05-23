@@ -257,8 +257,10 @@ export const CreditsTask = Task.create({
         'clean'
     ]
 }, (log, browser, environment) => {
+    let basePath = Path.join(environment.outputPath, 'Resources');
+
     // Ensure output directory exists
-    Mkdirp.sync(environment.outputPath);
+    Mkdirp.sync(basePath);
 
     // Build list of packages
     let modules = Object.values(browser.modules).concat([
@@ -282,7 +284,7 @@ export const CreditsTask = Task.create({
         );
 
         // Write credits to build directory
-        return Filesystem.writeJson(Path.join(environment.outputPath, 'credits.json'), credits, {
+        return Filesystem.writeJson(Path.join(basePath, 'credits.json'), credits, {
             spaces: 2
         });
     });

@@ -6,10 +6,12 @@ import Find from 'lodash/find';
 import ForEach from 'lodash/forEach';
 import FunctionModulePlugin from 'webpack/lib/FunctionModulePlugin';
 import IsNil from 'lodash/isNil';
+import Map from 'lodash/map';
 import MapValues from 'lodash/mapValues';
 import Merge from 'lodash/merge';
 import Path from 'path';
 import Pick from 'lodash/pick';
+import PickBy from 'lodash/pickBy';
 import SortBy from 'lodash/sortBy';
 import Webpack from 'webpack';
 
@@ -441,20 +443,20 @@ export function createConfiguration(browser, environment) {
             //
 
             new Webpack.optimize.CommonsChunkPlugin({
-                name: 'background/common',
+                name: 'Background/Common',
 
                 chunks: [
-                    'background/main/main',
-                    'background/migrate/migrate',
+                    'Background/Messaging',
 
-                    'background/messaging/messaging',
-                    'background/messaging/services/contentScript',
-                    'background/messaging/services/library',
-                    'background/messaging/services/scrobble'
+                    'Background/Services/App',
+                    'Background/Services/ContentScript',
+                    'Background/Services/Library',
+                    'Background/Services/Migrate',
+                    'Background/Services/Scrobble'
                 ],
 
                 minChunks: (module, count) => shouldExtractModule(browser, environment, module, count, {
-                    chunk: 'background/common',
+                    chunk: 'Background/Common',
 
                     shared: true,
                     types: ['browser', 'framework']
@@ -462,16 +464,26 @@ export function createConfiguration(browser, environment) {
             }),
 
             new Webpack.optimize.CommonsChunkPlugin({
-                name: 'destination/common',
+                name: 'Modules/Common',
 
-                chunks: [].concat(...Filter(browser.modules, { type: 'destination' }).map((module) =>
-                    (module.webpack.chunks || []).map((chunk) =>
-                        `destination/${module.key}/${chunk}/${chunk}`
-                    )
-                )),
+                chunks: [].concat(...Map(browser.modules, (module) => {
+                    let chunks = [];
+
+                    // Include main module
+                    if(['source'].indexOf(module.type) >= 0) {
+                        chunks.push(`Modules/${module.name}/Main`);
+                    }
+
+                    // Include additional modules
+                    ForEach(PickBy(module.webpack.modules, ({entry}) => !entry), (_, name) => {
+                        chunks.push(`Modules/${module.name}/${name}`);
+                    });
+
+                    return chunks;
+                })),
 
                 minChunks: (module, count) => shouldExtractModule(browser, environment, module, count, {
-                    chunk: 'destination/common',
+                    chunk: 'Modules/Common',
 
                     shared: true,
                     types: ['browser', 'core', 'framework']
@@ -479,38 +491,17 @@ export function createConfiguration(browser, environment) {
             }),
 
             new Webpack.optimize.CommonsChunkPlugin({
-                name: 'source/common',
-
-                chunks: [].concat(...Filter(browser.modules, { type: 'source' }).map((module) => [
-                    `source/${module.key}/${module.key}`,
-
-                    // Include additional chunks
-                    ...(module.webpack.chunks || []).map((chunk) =>
-                        `source/${module.key}/${chunk}/${chunk}`
-                    )
-                ])),
-
-                minChunks: (module, count) => shouldExtractModule(browser, environment, module, count, {
-                    chunk: 'source/common',
-
-                    shared: true,
-                    types: ['browser', 'core', 'framework']
-                })
-            }),
-
-            new Webpack.optimize.CommonsChunkPlugin({
-                name: 'common',
+                name: 'Common',
 
                 chunks: [
-                    'background/common',
-                    'destination/common',
-                    'source/common',
+                    'Background/Common',
+                    'Modules/Common',
 
-                    'application'
+                    'Application'
                 ],
 
                 minChunks: (module, count) => shouldExtractModule(browser, environment, module, count, {
-                    chunk: 'common'
+                    chunk: 'Common'
                 })
             }),
 
