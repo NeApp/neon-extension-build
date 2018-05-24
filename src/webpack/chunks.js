@@ -10,17 +10,23 @@ import Path from 'path';
 import SortBy from 'lodash/sortBy';
 
 import Vorpal from '../core/vorpal';
-import {capitalize} from '../core/helpers/value';
+import {Services, ServiceIds, ServiceOptions} from '../core/constants';
 import {resolvePath} from '../core/helpers/path';
 
 
 const Logger = Vorpal.logger;
 
 function parseServiceId(id) {
-    let parts = id.split('/');
-
     let name = null;
     let type = null;
+
+    // Ensure service exists
+    if(ServiceIds.indexOf(id) < 0) {
+        return { name, type };
+    }
+
+    // Split service identifier into name and type
+    let parts = id.split(':');
 
     if(parts.length === 1) {
         name = parts[0];
@@ -28,13 +34,10 @@ function parseServiceId(id) {
         name = parts[1];
         type = parts[0];
     } else {
-        throw new Error(`Invalid service identifier: "${id}"`);
+        throw new Error(`Invalid service identifier: ${id}`);
     }
 
-    return {
-        name: capitalize(name),
-        type: capitalize(type)
-    };
+    return { name, type };
 }
 
 function getServices(modules, id, options) {
@@ -44,6 +47,10 @@ function getServices(modules, id, options) {
 
     // Parse service identifier
     let {name} = parseServiceId(id);
+
+    if(IsNil(name)) {
+        throw new Error(`Unknown service: ${id}`);
+    }
 
     // Find matching services
     let items = [];
@@ -106,8 +113,13 @@ function getModuleServices(browser, environment, module) {
         // Parse service identifier
         let {name, type} = parseServiceId(id);
 
-        // Ignore migration service
-        if(name === 'Migrate') {
+        if(IsNil(name)) {
+            Logger.error(Chalk.red(`Unknown service "${name}" for "${module.name}"`));
+            continue;
+        }
+
+        // Ignore excluded services
+        if(ServiceOptions[id] && ServiceOptions[id].include === false) {
             continue;
         }
 
@@ -123,7 +135,7 @@ function getModuleServices(browser, environment, module) {
         }
 
         // Only include the plugin configuration service
-        if(name === 'Configuration') {
+        if(id === Services.Configuration) {
             items.push(servicePath);
             continue;
         }
@@ -153,7 +165,7 @@ function createModule(browser, environment, module) {
     return {
         [`Modules/${module.name}/Main`]: [
             ...browser.webpack.common,
-            ...getServices([browser.modules['neon-extension-core']], 'configuration'),
+            ...getServices([browser.modules['neon-extension-core']], Services.Configuration),
             ...getModuleServices(browser, environment, module)
         ]
     };
@@ -213,7 +225,7 @@ export function createChunks(browser, environment) {
     return {
         'Background/Messaging': [
             ...browser.webpack.common,
-            ...getServices(modules, 'configuration'),
+            ...getServices(modules, Services.Configuration),
 
             'neon-extension-core/Messaging'
         ],
@@ -224,37 +236,37 @@ export function createChunks(browser, environment) {
 
         'Background/Services/App': [
             ...browser.webpack.common,
-            ...getServices(modules, 'configuration'),
+            ...getServices(modules, Services.Configuration),
 
             'neon-extension-core/Services/App'
         ],
 
         'Background/Services/ContentScript': [
             ...browser.webpack.common,
-            ...getServices(modules, 'configuration'),
+            ...getServices(modules, Services.Configuration),
 
             'neon-extension-core/Services/ContentScript'
         ],
 
         'Background/Services/Library': [
             ...browser.webpack.common,
-            ...getServices(modules, 'configuration'),
+            ...getServices(modules, Services.Configuration),
 
             'neon-extension-core/Services/Library'
         ],
 
         'Background/Services/Migrate': [
             ...browser.webpack.common,
-            ...getServices(modules, 'configuration'),
-            ...getServices(modules, 'migrate'),
+            ...getServices(modules, Services.Configuration),
+            ...getServices(modules, Services.Migrate),
 
             'neon-extension-core/Services/Migrate'
         ],
 
         'Background/Services/Scrobble': [
             ...browser.webpack.common,
-            ...getServices(modules, 'configuration'),
-            ...getServices(destinations, 'destination/scrobble'),
+            ...getServices(modules, Services.Configuration),
+            ...getServices(destinations, Services.Destination.Scrobble),
 
             'neon-extension-core/Services/Scrobble'
         ],
@@ -271,7 +283,7 @@ export function createChunks(browser, environment) {
             ...browser.webpack.common,
 
             // Include configuration services
-            ...getServices(modules, 'configuration', { includeComponents: true }),
+            ...getServices(modules, Services.Configuration, { includeComponents: true }),
 
             // Bootstrap
             'neon-extension-core/App'
