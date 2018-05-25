@@ -41,7 +41,7 @@ function getReleaseNotes(module, tag) {
 
         return (
             `### [${module.name}](https://github.com/NeApp/${module.name}/releases/tag/${tag})\n\n` +
-            `${data.body}`
+            `${data.body.trim()}`
         );
     }, () => {
         return null;
@@ -131,7 +131,7 @@ export function updatePackageRelease(log, extension, repository, modules, tag) {
             .then((notes) => getReleaseNotesForModules(modules, tag).then((moduleNotes) => {
                 Remove(moduleNotes, IsNil);
 
-                return notes.concat(...moduleNotes);
+                return [notes].concat(...moduleNotes).join('\n\n');
             }))
             // Open editor (to allow the editing of release notes)
             .then((notes) => openEditor(extension, notes))
