@@ -146,7 +146,13 @@ function updatePackageDependenciesGroup(group, versions, pkg) {
         let current = versions[name];
 
         if(group === 'peerDependencies') {
+            let satisfied = SemanticVersion.satisfies(versions[name], current);
+
             current = `^${versions[name]}`;
+
+            if(satisfied) {
+                return current;
+            }
         }
 
         // Ensure version has changed
@@ -252,6 +258,8 @@ function updatePackages(log, browser, version, options) {
 
             // Store module version
             versions[module.name] = pkg.version;
+
+            return Promise.resolve();
         }
 
         // Read package metadata from file (to determine the current EOL character)
