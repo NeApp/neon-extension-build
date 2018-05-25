@@ -129,9 +129,13 @@ export function updatePackageRelease(log, extension, repository, modules, tag) {
             )
             // Retrieve release notes for modules
             .then((notes) => getReleaseNotesForModules(modules, tag).then((moduleNotes) => {
-                Remove(moduleNotes, IsNil);
+                notes = [notes].concat(...moduleNotes);
 
-                return [notes].concat(...moduleNotes).join('\n\n');
+                // Remove non-existent notes
+                Remove(notes, (notes) => IsNil(notes) || notes.length < 0);
+
+                // Join notes from all modules
+                return notes.join('\n\n');
             }))
             // Open editor (to allow the editing of release notes)
             .then((notes) => openEditor(extension, notes))
