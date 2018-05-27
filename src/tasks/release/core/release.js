@@ -26,7 +26,7 @@ function extractReleaseNotes(message) {
         return '';
     }
 
-    return notes[0];
+    return notes[0].trim();
 }
 
 function getReleaseNotes(module, tag) {
@@ -132,7 +132,7 @@ export function updatePackageRelease(log, extension, repository, modules, tag) {
                 notes = [notes].concat(...moduleNotes);
 
                 // Remove non-existent notes
-                Remove(notes, (notes) => IsNil(notes) || notes.length < 0);
+                Remove(notes, (notes) => IsNil(notes) || notes.length < 1);
 
                 // Join notes from all modules
                 return notes.join('\n\n');
