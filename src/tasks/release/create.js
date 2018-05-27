@@ -23,8 +23,12 @@ export const ReleaseFiles = [
 
 function isPatchRelease(current, next) {
     return (
+        // Major + Minor
         SemanticVersion.major(current) === SemanticVersion.major(next) &&
-        SemanticVersion.minor(current) === SemanticVersion.minor(next)
+        SemanticVersion.minor(current) === SemanticVersion.minor(next) &&
+
+        // Pre-release
+        IsNil(SemanticVersion.prerelease(current)) === IsNil(SemanticVersion.prerelease(next))
     );
 }
 
