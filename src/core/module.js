@@ -44,7 +44,7 @@ function getModulePath(basePath, name, type) {
     let path;
 
     // Find development module type directory
-    path = Path.join(basePath, (type.directory || '') + name);
+    path = Path.resolve(basePath, (type.directory || '') + name);
 
     if(Filesystem.existsSync(path)) {
         return path;
@@ -52,11 +52,11 @@ function getModulePath(basePath, name, type) {
 
     // Find browser package
     if(type.name === 'package' && Filesystem.existsSync(basePath, 'extension.json')) {
-        return basePath;
+        return Path.resolve(basePath);
     }
 
     // Find installed module
-    path = Path.join(basePath, 'node_modules', name);
+    path = Path.resolve(basePath, 'node_modules', name);
 
     if(Filesystem.existsSync(path)) {
         return path;

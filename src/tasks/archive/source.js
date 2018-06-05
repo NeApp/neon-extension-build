@@ -7,7 +7,7 @@ import {Task} from '../../core/helpers';
 import {createZip} from '../../core/zip';
 
 
-const Pattern = '{assets/**/*,*.json,*.md,.*}';
+const Pattern = '{Assets/**/*,*.json,*.md,.*}';
 
 function updateExtensionManifest(browser, environment) {
     let path = Path.join(environment.output.source, 'extension.json');
@@ -45,7 +45,7 @@ export const SourceArchiveTask = Task.create({
             archive: Path.join(environment.buildPath, `Neon-${browser.title}-${browser.versionName}-sources.zip`),
 
             source: environment.output.source,
-            pattern: '{assets/**/*,*.json,*.md,.*}'
+            pattern: '{Assets/**/*,*.json,*.md,.*}'
         }));
 });
 

@@ -24,7 +24,7 @@ export const Assets = Task.create({
 
     // Copy assets to build directory
     return Promise.all(Map(browser.modules, (module) => {
-        let src = Path.join(module.path, 'assets');
+        let src = Path.join(module.path, 'Assets');
         let dest = environment.outputPath;
 
         // Ensure source path exists

@@ -5,7 +5,6 @@ import ForEach from 'lodash/forEach';
 import Get from 'lodash/get';
 import IsNil from 'lodash/isNil';
 import Path from 'path';
-import SemanticVersion from 'semver';
 import Set from 'lodash/set';
 import UniqBy from 'lodash/uniqBy';
 
@@ -23,7 +22,6 @@ const IgnoredPackages = [
 export class Validator {
     constructor() {
         this.dependencies = {};
-        this.peerDependencies = {};
 
         this.links = {};
 
@@ -83,22 +81,13 @@ export class Validator {
             return false;
         }
 
-        // Ignore neon modules
-        if(dep.name.startsWith('neon-extension-')) {
-            return false;
-        }
-
         // Apply `IgnoredPackages` filter
         if(IgnoredPackages.indexOf(dep.name) >= 0) {
             return false;
         }
 
-        // Search for dependency definition
-        let extensionDependency = browser.extension.package.devDependencies[dep.name];
-
         // Find registered module matching source (if available)
         let module;
-        let moduleDependency;
 
         if(!IsNil(source)) {
             module = Find(browser.modules, (module) => {
@@ -113,20 +102,83 @@ export class Validator {
             }
         }
 
-        if(!IsNil(module) && module.type !== 'package') {
-            moduleDependency = module.package.dependencies[dep.name];
+        // Ignore internal dependencies
+        if(!IsNil(module) && dep.name === module.name) {
+            return true;
         }
 
-        // Pick definition
+        // Apply module dependency rules
+        if(dep.name.startsWith('neon-extension-') && !this._isModulePermitted(module, dep.name)) {
+            Logger.error(`Dependency "${dep.name}" is not permitted for "${module.name}"`);
+
+            this._error = true;
+            return false;
+        }
+
+        // Find extension dependency
+        let extensionDependency = browser.extension.package.dependencies[dep.name];
+
+        // Ensure development dependency isn't defined
+        if(!IsNil(extensionDependency) && !IsNil(browser.extension.package.devDependencies[dep.name])) {
+            Logger.error(`Dependency "${dep.name}" shouldn't be defined as a development dependency`);
+
+            this._error = true;
+            return false;
+        }
+
+        // Find module dependency
+        let moduleDependency;
+
+        if(!IsNil(module) && module.type !== 'package') {
+            moduleDependency = module.package.dependencies[dep.name];
+
+            // Ensure dependency exists
+            if(IsNil(moduleDependency)) {
+                Logger.error(`Dependency "${dep.name}" should be defined for "${module.name}"`);
+
+                this._error = true;
+                return false;
+            }
+
+            // Ensure development dependency isn't defined
+            if(!IsNil(module.package.devDependencies[dep.name])) {
+                Logger.error(
+                    `Dependency "${dep.name}" for "${module.name}" shouldn't be defined as ` +
+                    'a development dependency'
+                );
+
+                this._error = true;
+                return false;
+            }
+
+            // Ensure peer dependency isn't defined
+            if(!IsNil(module.package.peerDependencies[dep.name])) {
+                Logger.error(
+                    `Dependency "${dep.name}" for "${module.name}" shouldn't be defined as ` +
+                    'a peer dependency'
+                );
+
+                this._error = true;
+                return false;
+            }
+
+            // Ensure dependency matches the extension (if defined)
+            if(!IsNil(extensionDependency) && moduleDependency !== extensionDependency) {
+                Logger.error(
+                    `Dependency "${dep.name}" versions should match ` +
+                    `(extension: ${extensionDependency}, ${module.name}: ${moduleDependency})`
+                );
+
+                this._error = true;
+                return false;
+            }
+        }
+
+        // Pick dependency definition
         let dependency = moduleDependency || extensionDependency;
 
-        // Ensure dependency definition was found
         if(IsNil(dependency)) {
-            if(!IsNil(module)) {
-                Logger.error(`Unable to find "${dep.name}" dependency for "${module.name}"`);
-            } else {
-                Logger.error(`Unable to find "${dep.name}" dependency`);
-            }
+            Logger.error(`Dependency "${dep.name}" should be defined`);
 
             this._error = true;
             return false;
@@ -150,57 +202,14 @@ export class Validator {
             return false;
         }
 
-        // Ensure dependencies aren't duplicated
-        if(!IsNil(moduleDependency) && !IsNil(extensionDependency)) {
-            Logger.error(
-                `Dependency "${dep.name}" has been duplicated ` +
-                `(extension: ${extensionDependency}, ${module.name}: ${moduleDependency})`
-            );
-
-            this._error = true;
-            return false;
-        }
-
-        // Mark dependency
+        // Mark module dependency
         if(!IsNil(moduleDependency)) {
             Set(this.dependencies, [browser.name, environment.name, module.name, dep.name], true);
-        } else {
-            Set(this.dependencies, [browser.name, environment.name, null, dep.name], true);
         }
 
-        // Validate module dependency
-        if(!IsNil(module) && module.type !== 'package') {
-            let modulePeerDependency = module.package.peerDependencies[dep.name];
-
-            // Mark peer dependency
-            Set(this.peerDependencies, [browser.name, environment.name, module.name, dep.name], true);
-
-            // Ensure peer dependency is defined
-            if(!IsNil(extensionDependency) && IsNil(modulePeerDependency)) {
-                Logger.error(`"${dep.name}" should be defined as a peer dependency in "${module.name}"`);
-
-                this._error = true;
-                return false;
-            }
-
-            // Ensure peer dependency is a caret range
-            if(!IsNil(extensionDependency) && modulePeerDependency.indexOf('^') !== 0) {
-                Logger.error(`"${dep.name}" peer dependency in "${module.name}" should be a caret range`);
-
-                this._error = true;
-                return false;
-            }
-
-            // Ensure extension dependency matches peer dependency range
-            if(!IsNil(extensionDependency) && !SemanticVersion.satisfies(extensionDependency, modulePeerDependency)) {
-                Logger.error(
-                    `"${dep.name}" peer dependency in "${module.name}" (${modulePeerDependency}) ` +
-                    `is not satisfied by extension version: ${extensionDependency}`
-                );
-
-                this._error = true;
-                return false;
-            }
+        // Mark extension dependency
+        if(!IsNil(extensionDependency)) {
+            Set(this.dependencies, [browser.name, environment.name, null, dep.name], true);
         }
 
         return true;
@@ -235,10 +244,6 @@ export class Validator {
             return;
         }
 
-        if(IsNil(this.peerDependencies[browser.name]) || IsNil(this.peerDependencies[browser.name][environment.name])) {
-            return;
-        }
-
         // Ensure there are no unused extension dependencies
         this._checkDependencies('Dependency',
             browser.extension.package.dependencies,
@@ -250,12 +255,6 @@ export class Validator {
             this._checkDependencies('Dependency',
                 module.package.dependencies,
                 this.dependencies[browser.name][environment.name][module.name],
-                module.name
-            );
-
-            this._checkDependencies('Peer dependency',
-                module.package.peerDependencies,
-                this.peerDependencies[browser.name][environment.name][module.name],
                 module.name
             );
         });
@@ -303,6 +302,14 @@ export class Validator {
         return UniqBy(result, (source) =>
             source.module.userRequest || source.module.name
         );
+    }
+
+    _isModulePermitted(module, name) {
+        if(IsNil(module)) {
+            return true;
+        }
+
+        return name === 'neon-extension-framework';
     }
 
     _parseDependency(request) {

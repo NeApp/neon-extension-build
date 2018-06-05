@@ -63,9 +63,6 @@ export function readPackageDetails(path) {
 
         // Parse package details
         return parsePackageDetails(data);
-    }, () => {
-        // Return default package details
-        return parsePackageDetails({});
     });
 }
 

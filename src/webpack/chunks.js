@@ -68,8 +68,8 @@ function getServices(modules, id, options) {
 
         // Resolve service path
         let servicePath = resolvePath([
-            Path.resolve(module.path, `src/Services/${name}/${name}.js`),
-            Path.resolve(module.path, `src/Services/${name}.js`)
+            Path.resolve(module.path, `Services/${name}/${name}.js`),
+            Path.resolve(module.path, `Services/${name}.js`)
         ]);
 
         if(IsNil(servicePath)) {
@@ -82,7 +82,7 @@ function getServices(modules, id, options) {
 
         // Include components (if enabled)
         // TODO Scan directory, and include components individually
-        let componentsPath = Path.resolve(module.path, `src/Components/${name}/index.js`);
+        let componentsPath = Path.resolve(module.path, `Components/${name}/index.js`);
 
         if(Filesystem.existsSync(componentsPath) && options.includeComponents) {
             items.push(componentsPath);
@@ -125,8 +125,8 @@ function getModuleServices(browser, environment, module) {
 
         // Resolve service path
         let servicePath = resolvePath([
-            Path.resolve(module.path, `src/Services/${name}/${name}.js`),
-            Path.resolve(module.path, `src/Services/${name}.js`)
+            Path.resolve(module.path, `Services/${name}/${name}.js`),
+            Path.resolve(module.path, `Services/${name}.js`)
         ]);
 
         if(IsNil(servicePath)) {
@@ -142,8 +142,8 @@ function getModuleServices(browser, environment, module) {
 
         // Resolve bootstrap path
         let mainPath = resolvePath([
-            Path.resolve(framework.path, `src/Bootstrap/${type}/${name}/${name}.js`),
-            Path.resolve(framework.path, `src/Bootstrap/${type}/${name}.js`)
+            Path.resolve(framework.path, `Bootstrap/${type}/${name}/${name}.js`),
+            Path.resolve(framework.path, `Bootstrap/${type}/${name}.js`)
         ]);
 
         if(IsNil(mainPath)) {
@@ -208,7 +208,7 @@ function createModuleChunks(browser, module) {
 
             // Include modules (with module prefix)
             ...Map(modules, (name) =>
-                Path.resolve(module.path, `src/${name}`)
+                Path.resolve(module.path, `${name}`)
             )
         ];
     });

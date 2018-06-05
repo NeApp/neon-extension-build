@@ -72,7 +72,7 @@ function encodeModuleManifests(modules) {
     return Pick(manifests, Object.keys(manifests).sort());
 }
 
-function getBabelPaths(browser, environment) {
+function getBabelPaths(browser, sourceOnly = false) {
     let modules = Filter(browser.modules, (module) => module.type !== 'package');
 
     // Build list of babel includes
@@ -80,7 +80,11 @@ function getBabelPaths(browser, environment) {
 
     ForEach(SortBy(modules, 'name'), (module) => {
         // Include source directory
-        items.push(Path.resolve(module.path, 'src'));
+        items.push(module.path);
+
+        if(sourceOnly) {
+            return;
+        }
 
         // Include additional directories from manifest
         items.push(...module.webpack.babel
@@ -106,7 +110,7 @@ function getModuleAliases(browser) {
         let result = {};
 
         // Module
-        result[module.name] = Path.resolve(module.path, 'src');
+        result[module.name] = module.path;
 
         // Aliases
         for(let name in module.webpack.alias) {
@@ -118,7 +122,7 @@ function getModuleAliases(browser) {
 
             // Parse alias
             if(target === './') {
-                result[name] = Path.resolve(module.path, 'src');
+                result[name] = module.path;
             } else {
                 result[name] = target;
             }
@@ -205,20 +209,6 @@ function getModuleDetails(browser, environment, path) {
     }
 
     return null;
-}
-
-function getModulePaths(browser, environment) {
-    let modules = Filter(browser.modules, (module) => module.type !== 'package');
-
-    return [
-        // Shared modules
-        Path.resolve(browser.path, 'node_modules'),
-
-        // Plugin modules
-        ...SortBy(modules, 'name').map((module) =>
-            Path.join(module.path, 'node_modules')
-        )
-    ];
 }
 
 function generateModuleIdentifier(browser, environment, module, fallback) {
@@ -345,29 +335,12 @@ export function createConfiguration(browser, environment) {
             rules: [
                 {
                     test: /\.js$/,
-                    include: getBabelPaths(browser, environment),
+                    include: getBabelPaths(browser, true),
                     exclude: /(node_modules)/,
 
                     enforce: 'pre',
-                    use: [
-                        {
-                            loader: 'eslint-loader',
-                            options: {
-                                baseConfig: {
-                                    'settings': {
-                                        'import/resolver': {
-                                            'eslint-import-resolver-node-extended': {
-                                                'alias': getModuleAliases(browser, environment),
-                                                'paths': getModulePaths(browser, environment)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    ]
+                    use: ['eslint-loader']
                 },
-
                 {
                     test: /\.js$/,
                     include: [
@@ -385,7 +358,7 @@ export function createConfiguration(browser, environment) {
                         Filesystem.realpathSync(Path.resolve(browser.path, 'node_modules/lodash-es')),
                         Filesystem.realpathSync(Path.resolve(browser.path, 'node_modules/wes')),
 
-                        ...getBabelPaths(browser, environment)
+                        ...getBabelPaths(browser)
                     ],
 
                     use: [

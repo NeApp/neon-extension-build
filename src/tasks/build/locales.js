@@ -10,7 +10,7 @@ import {Task} from '../../core/helpers';
 
 
 function copyLocaleNamespaces(log, module, language, destinationPath) {
-    let localePath = Path.join(module.path, 'locales', language);
+    let localePath = Path.join(module.path, 'Locales', language);
 
     if(!Filesystem.existsSync(localePath)) {
         return Promise.resolve();
