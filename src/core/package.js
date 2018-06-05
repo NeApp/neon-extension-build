@@ -17,11 +17,21 @@ export function getPackageModules(path) {
         }
 
         // Find package modules
-        return Filter(Object.keys(pkg.dependencies), (name) =>
+        let modules = Filter(Object.keys(pkg.dependencies), (name) =>
             name.indexOf('neon-extension-') === 0 && [
-                'neon-extension-build'
+                'neon-extension-build',
+                'neon-extension-core',
+                'neon-extension-framework'
             ].indexOf(name) < 0
         );
+
+        // Return ordered modules
+        return [
+            'neon-extension-framework',
+            'neon-extension-core',
+
+            ...modules
+        ];
     });
 }
 
