@@ -1,39 +1,67 @@
+import Chalk from 'chalk';
 import ForEach from 'lodash/forEach';
 import IsNil from 'lodash/isNil';
+import IsPlainObject from 'lodash/isPlainObject';
+import IsString from 'lodash/isString';
+import Map from 'lodash/map';
 import {exec} from 'child_process';
 
-import Github from './github';
-import Vorpal from './vorpal';
-import {resolveOne} from './helpers/promise';
 
-
-export function getBranches(current) {
-    let branches;
-
-    if(current.indexOf('v') === 0) {
-        branches = ['master'];
-    } else {
-        branches = ['develop', 'master'];
+function parseLines(lines) {
+    if(IsNil(lines) || lines.length < 1) {
+        return [];
     }
 
-    // Find existing position of `current`
-    let i = branches.indexOf(current);
+    return Map(lines.split('\n'), (line) => {
+        line = line.trim();
 
-    if(i < 0) {
-        // Add current branch to front
-        branches.unshift(current);
-    } else if(i > 0) {
-        // Move current branch to front
-        branches.splice(i, 1);
-        branches.unshift(current);
-    }
+        // Retrieve level
+        let level = 'info';
 
-    return branches;
+        if(line.indexOf('npm WARN ') === 0) {
+            level = 'warn';
+            line = line.substring(9);
+        } else if(line.indexOf('npm ERR! ') === 0) {
+            level = 'error';
+            line = line.substring(9);
+        }
+
+        // Return parsed line
+        return { level, line };
+    });
 }
 
-export function install(name, options) {
+function writeLines(log, lines, options = null) {
+    options = {
+        defaultColour: null,
+        prefix: null,
+
+        ...(options || {})
+    };
+
+    let prefix = '';
+
+    if(!IsNil(options.prefix) && options.prefix.length > 0) {
+        prefix = `${options.prefix} `;
+    }
+
+    // Write lines to logger
+    ForEach(parseLines(lines), ({ level, line }) => {
+        if(level === 'warn') {
+            log.warn(prefix + Chalk.yellow(line));
+        } else if(level === 'error') {
+            log.error(prefix + Chalk.red(line));
+        } else if(!IsNil(options.defaultColour)) {
+            log.info(prefix + Chalk[options.defaultColour](line));
+        } else {
+            log.info(prefix + line);
+        }
+    });
+}
+
+function run(cmd, options) {
     return new Promise((resolve, reject) => {
-        exec(`npm install ${name}`, options, (err, stdout, stderr) => {
+        exec(`npm ${cmd}`, options, (err, stdout, stderr) => {
             if(!IsNil(err)) {
                 reject(err);
                 return;
@@ -41,70 +69,112 @@ export function install(name, options) {
 
             // Resolve promise
             resolve({
-                stdout,
-                stderr
+                stdout: stdout.trim(),
+                stderr: stderr.trim()
             });
         });
     });
 }
 
-export function installModule(name, branch, {cwd}) {
-    return resolveOne(getBranches(branch), (branch) =>
-        // Check if branch exists
-        Github.exists(name, branch).then(() => {
-            Vorpal.logger.info(`[NeApp/${name}#${branch}] Installing...`);
+export function createHandler(log, prefix = null) {
+    return function({ stdout, stderr }) {
+        writeLines(log, stderr, { defaultColour: 'cyan', prefix });
+        writeLines(log, stdout, { prefix });
+    };
+}
 
-            // Install module
-            return install(`NeApp/${name}#${branch}`, { cwd }).then(({stdout, stderr}) => {
-                if(!IsNil(stderr)) {
-                    ForEach(stderr.trim().split('\n'), (line) => {
-                        let type;
+export function dedupe(options) {
+    return new Promise((resolve, reject) => {
+        exec('npm dedupe', options, (err, stdout, stderr) => {
+            if(!IsNil(err)) {
+                reject(err);
+                return;
+            }
 
-                        if(line.startsWith('npm ERR')) {
-                            type = 'error';
-                            line = line.substring(9);
-                        } else if(line.startsWith('npm WARN')) {
-                            type = 'warn';
-                            line = line.substring(9);
-                        }
-
-                        // Log message
-                        if(line.indexOf('requires a peer of') >= 0) {
-                            // Peer dependency message
-                            Vorpal.logger.debug(`[NeApp/${name}#${branch}] ${line}`);
-                        } else if(line.endsWith('loglevel="notice"')) {
-                            // Notice
-                            Vorpal.logger.debug(`[NeApp/${name}#${branch}] ${line}`);
-                        } else if(type === 'error') {
-                            // Error
-                            Vorpal.logger.error(`[NeApp/${name}#${branch}] ${line}`);
-                        } else if(type === 'warn') {
-                            // Warning
-                            Vorpal.logger.warn(`[NeApp/${name}#${branch}] ${line}`);
-                        } else {
-                            // Unknown level
-                            Vorpal.logger.info(`[NeApp/${name}#${branch}] ${line}`);
-                        }
-                    });
-                }
-
-                if(!IsNil(stdout)) {
-                    ForEach(stdout.trim().split('\n'), (line) =>
-                        Vorpal.logger.info(`[NeApp/${name}#${branch}] ${line}`)
-                    );
-                }
-            }, (err) => {
-                Vorpal.logger.warn(`[NeApp/${name}#${branch}] Exited with return code: ${err.code}`);
-                return Promise.reject(err);
+            // Resolve promise
+            resolve({
+                stdout: stdout.trim(),
+                stderr: stderr.trim()
             });
-        }, (err) => {
-            Vorpal.logger.warn(`[NeApp/${name}#${branch}] Error raised: ${err.message || err}`);
-            return Promise.reject(err);
-        })
-    );
+        });
+    });
+}
+
+export function install(name, options) {
+    if(IsNil(options) && IsPlainObject(name)) {
+        options = name;
+        name = null;
+    }
+
+    return new Promise((resolve, reject) => {
+        let cmd = 'npm install';
+
+        if(!IsNil(name)) {
+            cmd = `npm install ${name}`;
+        }
+
+        exec(cmd, options, (err, stdout, stderr) => {
+            if(!IsNil(err)) {
+                reject(err);
+                return;
+            }
+
+            // Resolve promise
+            resolve({
+                stdout: stdout.trim(),
+                stderr: stderr.trim()
+            });
+        });
+    });
+}
+
+export function link(pkgs, options) {
+    if(IsNil(pkgs)) {
+        return Promise.reject(new Error('Invalid value provided for the "name" parameter (expected array or string)'));
+    }
+
+    if(IsString(pkgs)) {
+        pkgs = [pkgs];
+    }
+
+    if(!Array.isArray(pkgs)) {
+        return Promise.reject(new Error('Invalid value provided for the "name" parameter (expected array or string)'));
+    }
+
+    if(pkgs.length < 1) {
+        return Promise.resolve();
+    }
+
+    return run(`link ${pkgs.join(' ')}`, options);
+}
+
+export function linkToGlobal(options) {
+    return run('link', options);
+}
+
+export function pack(path, options) {
+    return new Promise((resolve, reject) => {
+        exec(`npm pack ${path}`, options, (err, stdout, stderr) => {
+            if(!IsNil(err)) {
+                reject(err);
+                return;
+            }
+
+            // Resolve promise
+            resolve({
+                stdout: stdout.trim(),
+                stderr: stderr.trim()
+            });
+        });
+    });
 }
 
 export default {
+    createHandler,
+
+    dedupe,
     install,
-    installModule
+    link,
+    linkToGlobal,
+    pack
 };

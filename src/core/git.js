@@ -6,6 +6,20 @@ import SortBy from 'lodash/sortBy';
 
 
 export class Git {
+    clone(path, repoPath, localPath, options) {
+        return new Promise((resolve, reject) => {
+            // Clone repository to `path`
+            SimpleGit(path, options).silent(true).clone(repoPath, localPath, (err) => {
+                if(err) {
+                    reject(err);
+                    return;
+                }
+
+                resolve();
+            });
+        });
+    }
+
     contributors(path) {
         let repository = SimpleGit(path).silent(true);
 

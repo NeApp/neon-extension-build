@@ -1,37 +1,58 @@
 import Filesystem from 'fs-extra';
-import Filter from 'lodash/filter';
-import IsNil from 'lodash/isNil';
 import IsPlainObject from 'lodash/isPlainObject';
 import Merge from 'lodash/merge';
 import Path from 'path';
+import Without from 'lodash/without';
+import ForEach from 'lodash/forEach';
+import Filter from 'lodash/filter';
+import Values from 'lodash/values';
 
+
+export function orderModules(modules) {
+    let result = [];
+
+    ForEach([
+        'neon-extension-build',
+        'neon-extension-framework',
+        'neon-extension-core'
+    ], (name) => {
+        if(modules.indexOf(name) < 0) {
+            return;
+        }
+
+        result.push(name);
+    });
+
+    // Append remaining modules
+    return result.concat(Without(modules, ...result));
+}
+
+export function getBrowserModules(browser) {
+    return [
+        browser.modules['neon-extension-build'],
+        browser.modules['neon-extension-framework'],
+        browser.modules['neon-extension-core'],
+
+        ...Filter(Values(browser.modules), (module) => [
+            'neon-extension-build',
+            'neon-extension-framework',
+            'neon-extension-core'
+        ].indexOf(module.name) < 0)
+    ];
+}
 
 export function getPackageModules(path) {
     return Filesystem.readJson(path).then((pkg) => {
-        let match = /^neon-extension-(\w+)$/.exec(pkg.name);
-
-        if(IsNil(match) || ['build', 'core', 'framework'].indexOf(match[1]) >= 0) {
-            return Promise.reject(new Error(
-                `Invalid package: ${pkg.name} (expected current directory to contain a browser package)`
-            ));
+        if(pkg.name.indexOf('neon-extension-') !== 0) {
+            return Promise.reject(new Error(`Invalid module: ${pkg.name}`));
         }
 
-        // Find package modules
-        let modules = Filter(Object.keys(pkg.dependencies), (name) =>
-            name.indexOf('neon-extension-') === 0 && [
-                'neon-extension-build',
-                'neon-extension-core',
-                'neon-extension-framework'
-            ].indexOf(name) < 0
-        );
-
-        // Return ordered modules
-        return [
-            'neon-extension-framework',
-            'neon-extension-core',
-
-            ...modules
-        ];
+        return orderModules(Filter([
+            ...Object.keys(pkg.dependencies || {}),
+            ...Object.keys(pkg.peerDependencies || {})
+        ], (name) =>
+            name.indexOf('neon-extension-') === 0
+        ));
     });
 }
 
@@ -77,6 +98,9 @@ export function readPackageDetails(path) {
 }
 
 export default {
+    getBrowserModules,
     getPackageModules,
+    orderModules,
+
     readPackageDetails
 };
