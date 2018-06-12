@@ -59,8 +59,8 @@ function install(name, branch, { cwd }) {
 
                 // Clone repository
                 return Git.clone(modulesPath, `https://github.com/NeApp/${name}.git`, localPath, [
-                    '--depth 1',
-                    `-b ${branch}`
+                    '-b', branch,
+                    '--depth', '1'
                 ]);
             })
             .then(() => {

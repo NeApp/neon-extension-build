@@ -9,7 +9,7 @@ export class Git {
     clone(path, repoPath, localPath, options) {
         return new Promise((resolve, reject) => {
             // Clone repository to `path`
-            SimpleGit(path, options).silent(true).clone(repoPath, localPath, (err) => {
+            SimpleGit(path).silent(true).clone(repoPath, localPath, options, (err) => {
                 if(err) {
                     reject(err);
                     return;
