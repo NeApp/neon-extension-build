@@ -12,7 +12,7 @@ import {getPackageModules} from '../../core/package';
 import {resolveOne, runSequential} from '../../core/helpers/promise';
 
 
-function getBranches(current) {
+export function getBranches(current) {
     let branches;
 
     if(current.indexOf('v') === 0) {

@@ -1,4 +1,4 @@
-import {getBranches} from './npm';
+import {getBranches} from './install';
 
 
 describe('Commands', () => {
