@@ -1,5 +1,7 @@
 import Filesystem from 'fs-extra';
+import IsNil from 'lodash/isNil';
 import IsPlainObject from 'lodash/isPlainObject';
+import MapValues from 'lodash/mapValues';
 import Merge from 'lodash/merge';
 import Path from 'path';
 import Without from 'lodash/without';
@@ -7,6 +9,102 @@ import ForEach from 'lodash/forEach';
 import Filter from 'lodash/filter';
 import Values from 'lodash/values';
 
+
+
+export class Dependency {
+    constructor(values) {
+        // Parse values
+        let {name, version, requires, parent} = {
+            name: null,
+            version: null,
+            requires: {},
+
+            parent: null,
+
+            ...(values || {})
+        };
+
+        // Validate values
+        if(IsNil(name)) {
+            throw new Error('Missing required "name" value');
+        }
+
+        if(IsNil(version)) {
+            throw new Error('Missing required "version" value');
+        }
+
+        // Set values
+        this.name = name;
+        this.version = version;
+        this.requires = requires;
+        this.parent = parent;
+
+        this.dependencies = {};
+    }
+
+    get(name) {
+        return this.dependencies[name] || null;
+    }
+
+    resolve(name) {
+        let dependency = this.get(name);
+
+        if(!IsNil(dependency)) {
+            return dependency;
+        }
+
+        // Try resolve in parent
+        if(IsNil(this.parent)) {
+            return null;
+        }
+
+        return this.parent.resolve(name);
+    }
+}
+
+export function createDependencyTree(dependency, options = null) {
+    options = {
+        name: null,
+        parent: null,
+
+        ...(options || {})
+    };
+
+    // Parse dependency
+    let {name, version, requires, dependencies} = {
+        name: options.name,
+        version: null,
+        requires: {},
+        dependencies: {},
+
+        ...dependency
+    };
+
+    // Create dependency node
+    let node = new Dependency({
+        name,
+        version,
+        requires,
+
+        parent: options.parent
+    });
+
+    // Parse dependencies
+    node.dependencies = MapValues(dependencies, (dep, name) =>
+        createDependencyTree(dep, {
+            parent: node,
+            name
+        })
+    );
+
+    return node;
+}
+
+export function getDependencyTree(path) {
+    return Filesystem.readJson(Path.join(path, 'package-lock.json')).then((dependency) =>
+        createDependencyTree(dependency)
+    );
+}
 
 export function orderModules(modules) {
     let result = [];

@@ -1,4 +1,5 @@
 import Chalk from 'chalk';
+import Filter from 'lodash/filter';
 import ForEach from 'lodash/forEach';
 import IsNil from 'lodash/isNil';
 import IsPlainObject from 'lodash/isPlainObject';
@@ -62,16 +63,20 @@ function writeLines(log, lines, options = null) {
 function run(cmd, options) {
     return new Promise((resolve, reject) => {
         exec(`npm ${cmd}`, options, (err, stdout, stderr) => {
+            let result = {
+                err: err || null,
+
+                stdout: stdout && stdout.trim(),
+                stderr: stderr && stderr.trim()
+            };
+
             if(!IsNil(err)) {
-                reject(err);
+                reject(result);
                 return;
             }
 
             // Resolve promise
-            resolve({
-                stdout: stdout.trim(),
-                stderr: stderr.trim()
-            });
+            resolve(result);
         });
     });
 }
@@ -81,6 +86,22 @@ export function createHandler(log, prefix = null) {
         writeLines(log, stderr, { defaultColour: 'cyan', prefix });
         writeLines(log, stdout, { prefix });
     };
+}
+
+export function encodeOptions(options) {
+    return Filter(Map(options, (value, name) => {
+        if(value === false) {
+            return null;
+        }
+
+        if(value === true) {
+            return name;
+        }
+
+        return `${name} ${value}`;
+    }), (arg) => {
+        return !IsNil(arg);
+    }).join(' ');
 }
 
 export function dedupe(options) {
@@ -152,6 +173,19 @@ export function linkToGlobal(options) {
     return run('link', options);
 }
 
+export function list(path, options) {
+    let cmd = 'ls';
+
+    if(!IsNil(options)) {
+        cmd += ` ${encodeOptions(options)}`;
+    }
+
+    return run(cmd, {
+        cwd: path,
+        maxBuffer: 1024 * 1024 // 1 MB
+    });
+}
+
 export function pack(path, options) {
     return new Promise((resolve, reject) => {
         exec(`npm pack ${path}`, options, (err, stdout, stderr) => {
@@ -176,5 +210,6 @@ export default {
     install,
     link,
     linkToGlobal,
+    list,
     pack
 };
