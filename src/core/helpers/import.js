@@ -53,7 +53,7 @@ export function importGlob(path, options) {
         try {
             require(name);
         } catch(e) {
-            Logger.warn(`Unable to import "${name}": ${e}`);
+            Logger.warn(`Unable to import "${name}": ${e} ${e && e.stack}`);
         }
     });
 }
