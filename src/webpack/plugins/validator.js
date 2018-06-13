@@ -21,9 +21,10 @@ export default class ValidatorPlugin {
                     }
 
                     // Process modules
-                    chunk.modules.forEach((module) =>
-                        this.validator.processModule(this.browser, this.environment, module)
-                    );
+                    chunk.forEachModule((module) => {
+                        // Validate module
+                        this.validator.validate(this.browser, this.environment, module);
+                    });
 
                     count++;
                 });

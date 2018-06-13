@@ -16,11 +16,15 @@ const Logger = Vorpal.logger;
 const DependencyVersionRegex = /^\d+\.\d+\.\d+(\-\w+(\.\d+)?)?$/g;
 
 const IgnoredPackages = [
+    'jquery',
+    'react',
+    'react-dom',
     'webpack'
 ];
 
 export class Validator {
     constructor() {
+        this.checked = {};
         this.dependencies = {};
 
         this.links = {};
@@ -32,35 +36,26 @@ export class Validator {
         return new ValidatorPlugin(this, browser, environment);
     }
 
-    processModule(browser, environment, module) {
+    validate(browser, environment, module) {
         if(IsNil(browser) || IsNil(environment) || IsNil(module) || IsNil(module.userRequest)) {
             return;
         }
 
-        // Validate each module source
-        module.reasons.forEach((source) => {
-            let sourcePath = source.module.userRequest;
-
-            if(!IsNil(sourcePath)) {
-                // Map linked dependency source
-                ForEach(Get(this.links, [browser.name, environment.name]), (source, target) => {
-                    let index = sourcePath.indexOf(target);
-
-                    if(index < 0) {
-                        return;
-                    }
-
-                    // Update `sourcePath`
-                    sourcePath = source + sourcePath.substring(index + target.length);
-                });
+        // Validate module reasons
+        ForEach(this.resolveReasons(browser, environment, module), ({ module, source }) => {
+            if(Get(this.checked, [module.userRequest, source])) {
+                return;
             }
 
-            // Process dependency
-            this.processModuleDependency(browser, environment, sourcePath, module.userRequest);
+            // Mark as checked
+            Set(this.checked, [module.userRequest, source], true);
+
+            // Validate module reason
+            this.validateReason(browser, environment, source, module.userRequest);
         });
     }
 
-    processModuleDependency(browser, environment, source, request) {
+    validateReason(browser, environment, source, request) {
         if(IsNil(browser) || IsNil(environment) || IsNil(request)) {
             return false;
         }
@@ -109,18 +104,7 @@ export class Validator {
 
         // Apply module dependency rules
         if(dep.name.startsWith('neon-extension-') && !this._isModulePermitted(module, dep.name)) {
-            Logger.error(`Dependency "${dep.name}" is not permitted for "${module.name}"`);
-
-            this._error = true;
-            return false;
-        }
-
-        // Find extension dependency
-        let extensionDependency = browser.extension.package.dependencies[dep.name];
-
-        // Ensure development dependency isn't defined
-        if(!IsNil(extensionDependency) && !IsNil(browser.extension.package.devDependencies[dep.name])) {
-            Logger.error(`Dependency "${dep.name}" shouldn't be defined as a development dependency`);
+            Logger.error(`Dependency "${dep.name}" is not permitted for "${module.name}" (request: "${request}")`);
 
             this._error = true;
             return false;
@@ -130,73 +114,17 @@ export class Validator {
         let moduleDependency;
 
         if(!IsNil(module) && module.type !== 'package') {
-            moduleDependency = module.package.dependencies[dep.name];
+            let { dependency, valid } = this.validateDependency(dep, module);
 
-            // Ensure dependency exists
-            if(IsNil(moduleDependency)) {
-                Logger.error(`Dependency "${dep.name}" should be defined for "${module.name}"`);
-
+            if(!valid) {
                 this._error = true;
                 return false;
             }
 
-            // Ensure development dependency isn't defined
-            if(!IsNil(module.package.devDependencies[dep.name])) {
-                Logger.error(
-                    `Dependency "${dep.name}" for "${module.name}" shouldn't be defined as ` +
-                    'a development dependency'
-                );
-
-                this._error = true;
-                return false;
-            }
-
-            // Ensure peer dependency isn't defined
-            if(!IsNil(module.package.peerDependencies[dep.name])) {
-                Logger.error(
-                    `Dependency "${dep.name}" for "${module.name}" shouldn't be defined as ` +
-                    'a peer dependency'
-                );
-
-                this._error = true;
-                return false;
-            }
-
-            // Ensure dependency matches the extension (if defined)
-            if(!IsNil(extensionDependency) && moduleDependency !== extensionDependency) {
-                Logger.error(
-                    `Dependency "${dep.name}" versions should match ` +
-                    `(extension: ${extensionDependency}, ${module.name}: ${moduleDependency})`
-                );
-
-                this._error = true;
-                return false;
-            }
-        }
-
-        // Pick dependency definition
-        let dependency = moduleDependency || extensionDependency;
-
-        if(IsNil(dependency)) {
-            Logger.error(`Dependency "${dep.name}" should be defined`);
-
-            this._error = true;
-            return false;
-        }
-
-        // Ensure dependency is pinned to a version
-        if(!dependency.match(DependencyVersionRegex)) {
-            if(!IsNil(moduleDependency)) {
-                Logger.error(
-                    `Dependency "${dep.name}" for "${module.name}" ` +
-                    `should be pinned to a version (found: ${dependency})`
-                );
-            } else {
-                Logger.error(
-                    `Dependency "${dep.name}" ` +
-                    `should be pinned to a version (found: ${dependency})`
-                );
-            }
+            // Store result
+            moduleDependency = dependency;
+        } else {
+            Logger.error(`Dependency "${dep.name}" should be defined`, source);
 
             this._error = true;
             return false;
@@ -207,12 +135,114 @@ export class Validator {
             Set(this.dependencies, [browser.name, environment.name, module.name, dep.name], true);
         }
 
-        // Mark extension dependency
-        if(!IsNil(extensionDependency)) {
-            Set(this.dependencies, [browser.name, environment.name, null, dep.name], true);
+        return true;
+    }
+
+    validateDependency(dep, module) {
+        if(dep.name.indexOf('neon-extension-') === 0) {
+            return this.validateModule(dep, module);
         }
 
-        return true;
+        return this.validateRequirement(dep, module);
+    }
+
+    validateRequirement(dep, module) {
+        let moduleDependency = module.package.dependencies[dep.name];
+
+        // Ensure dependency exists
+        if(IsNil(moduleDependency)) {
+            Logger.error(`Dependency "${dep.name}" should be defined for "${module.name}"`);
+
+            return {
+                dependency: moduleDependency,
+                valid: false
+            };
+        }
+
+        // Ensure development dependency isn't defined
+        if(!IsNil(module.package.devDependencies[dep.name])) {
+            Logger.error(
+                `Dependency "${dep.name}" for "${module.name}" shouldn't be defined as ` +
+                'a development dependency'
+            );
+
+            return {
+                dependency: moduleDependency,
+                valid: false
+            };
+        }
+
+        // Ensure peer dependency isn't defined
+        if(!IsNil(module.package.peerDependencies[dep.name])) {
+            Logger.error(
+                `Dependency "${dep.name}" for "${module.name}" shouldn't be defined as ` +
+                'a peer dependency'
+            );
+
+            return {
+                dependency: moduleDependency,
+                valid: false
+            };
+        }
+
+        // Ensure dependency isn't pinned to a version
+        if(moduleDependency.match(DependencyVersionRegex)) {
+            Logger.error(
+                `Dependency "${dep.name}" for "${module.name}" ` +
+                `shouldn\'t be pinned to a version (found: ${moduleDependency})`
+            );
+
+            this._error = true;
+            return false;
+        }
+
+        return {
+            dependency: moduleDependency,
+            valid: true
+        };
+    }
+
+    validateModule(dep, module) {
+        let moduleDependency = module.package.peerDependencies[dep.name];
+
+        // Ensure dependency exists
+        if(IsNil(moduleDependency)) {
+            Logger.error(`Dependency "${dep.name}" should be defined for "${module.name}"`);
+
+            return {
+                dependency: moduleDependency,
+                valid: false
+            };
+        }
+
+        // Ensure development dependency isn't defined
+        if(!IsNil(module.package.devDependencies[dep.name])) {
+            Logger.error(
+                `Dependency "${dep.name}" for "${module.name}" shouldn't be defined as ` +
+                'a development dependency'
+            );
+
+            return {
+                dependency: moduleDependency,
+                valid: false
+            };
+        }
+
+        // Ensure dependency is pinned to a version
+        if(!moduleDependency.match(DependencyVersionRegex)) {
+            Logger.error(
+                `Dependency "${dep.name}" for "${module.name}" ` +
+                `should be pinned to a version (found: ${moduleDependency})`
+            );
+
+            this._error = true;
+            return false;
+        }
+
+        return {
+            dependency: moduleDependency,
+            valid: true
+        };
     }
 
     registerLink(browser, environment, source, target) {
@@ -235,14 +265,80 @@ export class Validator {
         Set(this.links, [browser.name, environment.name, target], source);
     }
 
+    resolveLink(browser, environment, path) {
+        if(IsNil(path)) {
+            return path;
+        }
+
+        // Map linked dependency source
+        ForEach(Get(this.links, [browser.name, environment.name]), (source, target) => {
+            let index = path.indexOf(target);
+
+            if(index < 0) {
+                return true;
+            }
+
+            // Update `path`
+            path = source + path.substring(index + target.length);
+            return false;
+        });
+
+        return path;
+    }
+
+    resolveModule(browser, path, options) {
+        options = {
+            dependencies: true,
+
+            ...(options || {})
+        };
+
+        return Find(browser.modules, (module) => {
+            if(module.type === 'package' || path.indexOf(module.path) < 0) {
+                return false;
+            }
+
+            if(!options.dependencies && path.indexOf(Path.join(module.path, 'node_modules')) > -1) {
+                return false;
+            }
+
+            return true;
+        });
+    }
+
+    resolveReasons(browser, environment, module) {
+        let reasons = [];
+
+        ForEach(module.reasons, (reason) => {
+            if(IsNil(reason.module) || IsNil(reason.module.userRequest)) {
+                return;
+            }
+
+            let source = this.resolveLink(browser, environment, reason.module.userRequest);
+
+            // Resolve module
+            if(!IsNil(this.resolveModule(browser, source, { dependencies: false }))) {
+                reasons.push({ module, source });
+                return;
+            }
+
+            // Resolve reasons
+            reasons.push(...this.resolveReasons(browser, environment, reason.module));
+        });
+
+        return reasons;
+    }
+
     finish(browser, environment) {
         if(this._error) {
             throw new Error('Build didn\'t pass validation');
         }
 
         if(IsNil(this.dependencies[browser.name]) || IsNil(this.dependencies[browser.name][environment.name])) {
-            return;
+            throw new Error('No dependencies validated');
         }
+
+        Logger.info(`Checked ${Object.keys(this.checked).length} module(s)`);
 
         // Ensure there are no unused extension dependencies
         this._checkDependencies('Dependency',
@@ -313,6 +409,15 @@ export class Validator {
     }
 
     _parseDependency(request) {
+        if(!Filesystem.existsSync(request)) {
+            request = request.substring(0, request.indexOf('/')) || request;
+
+            return {
+                name: request,
+                path: null
+            };
+        }
+
         let path = Path.dirname(request);
         let packagePath;
 

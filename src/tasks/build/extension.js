@@ -83,7 +83,9 @@ function runCompiler(compiler) {
 function writeStats(environment, stats) {
     return Filesystem.writeJson(
         Path.join(environment.buildPath, 'webpack.stats.json'),
-        stats.toJson('verbose')
+        stats.toJson({
+            chunkModules: true
+        })
     );
 }
 

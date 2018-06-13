@@ -89,10 +89,8 @@ function getBabelPaths(browser, sourceOnly = false) {
         // Include additional directories from manifest
         items.push(...module.webpack.babel
             .map((path) => resolvePath(
-                Path.resolve(module.path, path),
-
-                // Fallback to package modules
-                Path.resolve(browser.path, path)
+                Path.resolve(browser.path, path),
+                Path.resolve(module.path, path)
             ))
             .filter((value) =>
                 value !== null
@@ -237,11 +235,7 @@ function generateModuleIdentifier(browser, environment, module, fallback) {
 }
 
 function isSharedDependency(browser, name) {
-    if(IsNil(name) || name.startsWith('neon-extension-')) {
-        return false;
-    }
-
-    return !IsNil(browser.extension.package.dependencies[name]);
+    return !(IsNil(name) || name.startsWith('neon-extension-'));
 }
 
 function shouldExtractModule(browser, environment, module, count, options) {
@@ -280,9 +274,9 @@ function shouldExtractModule(browser, environment, module, count, options) {
     // Log module
     Logger.debug((include ? Chalk.green : Chalk.red)(
         `[${options.chunk}] ${module.userRequest} (` +
-        `count: ${count}, ` +
-        `type: "${details.type}", ` +
-        `shared: ${isSharedDependency(browser, details.name)}` +
+            `count: ${count}, ` +
+            `type: "${details.type}", ` +
+            `shared: ${isSharedDependency(browser, details.name)}` +
         ')'
     ));
 
