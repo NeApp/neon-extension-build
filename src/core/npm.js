@@ -121,11 +121,17 @@ export function dedupe(options) {
     });
 }
 
-export function install(name, options) {
+export function install(cwd, name, options) {
     if(IsNil(options) && IsPlainObject(name)) {
         options = name;
         name = null;
     }
+
+    options = {
+        cwd,
+
+        ...(options || {})
+    };
 
     return new Promise((resolve, reject) => {
         let cmd = 'npm install';
@@ -186,7 +192,13 @@ export function list(path, options) {
     });
 }
 
-export function pack(path, options) {
+export function pack(cwd, path, options) {
+    options = {
+        cwd,
+
+        ...(options || {})
+    };
+
     return new Promise((resolve, reject) => {
         exec(`npm pack ${path}`, options, (err, stdout, stderr) => {
             if(!IsNil(err)) {

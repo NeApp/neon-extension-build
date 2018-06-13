@@ -1,5 +1,6 @@
 import CloneDeep from 'lodash/cloneDeep';
 import Filesystem from 'fs-extra';
+import Find from 'lodash/find';
 import IsNil from 'lodash/isNil';
 import Merge from 'lodash/merge';
 import Path from 'path';
@@ -9,7 +10,7 @@ import Extension from './extension';
 import Version from './version';
 
 
-function findBrowser(basePath, browser) {
+export function findBrowser(basePath, browser) {
     if(Filesystem.existsSync(Path.join(basePath, 'extension.json'))) {
         return {
             local: true,
@@ -37,6 +38,17 @@ function findBrowser(basePath, browser) {
         local: false,
         path
     };
+}
+
+export function getBrowser(name) {
+    return Find(Browsers, (browser) => (
+        browser.name === name ||
+        browser.package === name
+    ));
+}
+
+export function isBrowser(name) {
+    return !IsNil(getBrowser(name));
 }
 
 function resolveFeatures(features) {

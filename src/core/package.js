@@ -4,11 +4,11 @@ import IsPlainObject from 'lodash/isPlainObject';
 import MapValues from 'lodash/mapValues';
 import Merge from 'lodash/merge';
 import Path from 'path';
+import PickBy from 'lodash/pickBy';
 import Without from 'lodash/without';
 import ForEach from 'lodash/forEach';
 import Filter from 'lodash/filter';
 import Values from 'lodash/values';
-
 
 
 export class Dependency {
@@ -139,19 +139,23 @@ export function getBrowserModules(browser) {
     ];
 }
 
-export function getPackageModules(path) {
-    return Filesystem.readJson(path).then((pkg) => {
-        if(pkg.name.indexOf('neon-extension-') !== 0) {
-            return Promise.reject(new Error(`Invalid module: ${pkg.name}`));
-        }
+export function getPackageModules(pkg) {
+    if(pkg.name.indexOf('neon-extension-') !== 0) {
+        return Promise.reject(new Error(`Invalid module: ${pkg.name}`));
+    }
 
-        return orderModules(Filter([
-            ...Object.keys(pkg.dependencies || {}),
-            ...Object.keys(pkg.peerDependencies || {})
-        ], (name) =>
-            name.indexOf('neon-extension-') === 0
-        ));
-    });
+    return orderModules(Filter([
+        ...Object.keys(pkg.dependencies || {}),
+        ...Object.keys(pkg.peerDependencies || {})
+    ], (name) =>
+        name.indexOf('neon-extension-') === 0
+    ));
+}
+
+export function readPackageModules(path) {
+    return Filesystem.readJson(path).then((pkg) =>
+        getPackageModules(pkg)
+    );
 }
 
 function parsePackageDetails(data) {
@@ -195,10 +199,86 @@ export function readPackageDetails(path) {
     });
 }
 
+export function updatePackageVersions(pkg, versions) {
+    function updateVersions(dependencies) {
+        if(IsNil(dependencies)) {
+            return dependencies;
+        }
+
+        return {
+            ...dependencies,
+
+            ...PickBy(versions, (_, name) =>
+                !IsNil(dependencies[name])
+            )
+        };
+    }
+
+    if(!IsNil(pkg.dependencies)) {
+        pkg.dependencies = updateVersions(pkg.dependencies);
+    }
+
+    if(!IsNil(pkg.peerDependencies)) {
+        pkg.peerDependencies = updateVersions(pkg.peerDependencies);
+    }
+
+    return pkg;
+}
+
+export function writePackageVersions(path, versions) {
+    if(Filesystem.statSync(path).isDirectory()) {
+        path = Path.join('package.json');
+    }
+
+    // Read package details
+    return Filesystem.readJson(path).then((pkg) =>
+        // Write package details
+        Filesystem.writeJson(path, updatePackageVersions(pkg, versions))
+    );
+}
+
+export function updatePackageLockVersions(locks, versions) {
+    return {
+        ...locks,
+
+        dependencies: {
+            ...locks.dependencies,
+
+            // Update dependencies
+            ...MapValues(PickBy(versions, (_, name) =>
+                !IsNil(locks.dependencies[name])
+            ), (version, name) => ({
+                ...locks.dependencies[name],
+
+                version
+            }))
+        }
+    };
+}
+
+export function writePackageLockVersions(path, versions) {
+    if(Filesystem.statSync(path).isDirectory()) {
+        path = Path.join('package-lock.json');
+    }
+
+    // Read package locks
+    return Filesystem.readJson(path).then((locks) =>
+        // Write package locks
+        Filesystem.writeJson(path, updatePackageLockVersions(locks, versions))
+    );
+}
+
 export default {
     getBrowserModules,
     getPackageModules,
     orderModules,
 
-    readPackageDetails
+    readPackageDetails,
+    readPackageModules,
+
+    updatePackageVersions,
+    updatePackageLockVersions,
+
+    writePackageVersions,
+    writePackageLockVersions
 };
