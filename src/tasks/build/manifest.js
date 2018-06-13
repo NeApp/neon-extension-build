@@ -214,6 +214,8 @@ export const Manifest = Task.create({
 
     required: [
         'clean',
+        'module:validate',
+
         'build:extension'
     ]
 }, function(log, browser, environment) {

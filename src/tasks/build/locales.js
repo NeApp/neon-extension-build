@@ -41,7 +41,8 @@ export const Locales = Task.create({
     description: 'Build extension locales.',
 
     required: [
-        'clean'
+        'clean',
+        'module:validate'
     ]
 }, function(log, browser, environment) {
     let destinationPath = Path.join(environment.outputPath, 'Locales');

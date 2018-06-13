@@ -94,7 +94,8 @@ export const Extension = Task.create({
     description: 'Build extension modules.',
 
     required: [
-        'clean'
+        'clean',
+        'module:validate'
     ]
 }, function(log, browser, environment) {
     // Construct compiler

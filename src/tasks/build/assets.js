@@ -16,7 +16,8 @@ export const Assets = Task.create({
     description: 'Build extension assets.',
 
     required: [
-        'clean'
+        'clean',
+        'module:validate'
     ]
 }, function(log, browser, environment) {
     // Ensure output directory exists

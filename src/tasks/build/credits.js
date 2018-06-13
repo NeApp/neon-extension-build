@@ -254,7 +254,8 @@ export const CreditsTask = Task.create({
     description: 'Build extension credits.',
 
     required: [
-        'clean'
+        'clean',
+        'module:validate'
     ]
 }, (log, browser, environment) => {
     let basePath = Path.join(environment.outputPath, 'Resources');
