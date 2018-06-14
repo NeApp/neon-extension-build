@@ -235,6 +235,11 @@ export function createRunner(task, defaultOptions) {
                     `Version Name: ${browser.versionName}`
                 ));
 
+                // Don't build dirty production environments
+                if(environment.name === 'production' && browser.extension.dirty) {
+                    return Promise.reject(new Error('Environment is dirty'));
+                }
+
                 // Run task
                 return task(browser, environment, options);
             })
