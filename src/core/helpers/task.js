@@ -143,13 +143,13 @@ export function createTask({name, required = [], optional = []}, handler = null)
                         if(options.required) {
                             Logger.error(
                                 `${prefix}Errored '${Chalk.cyan(name)}' after ${Chalk.magenta(Timer.end(name))}: ${
-                                    err.stack || err.message || err
+                                    (err && err.stack) ? err.stack : err
                                 }`
                             );
                         } else {
                             Logger.info(
                                 `${prefix}Skipped '${Chalk.cyan(name)}' after ${Chalk.magenta(Timer.end(name))}: ${
-                                    err.stack || err.message || err
+                                    (err && err.stack) ? err.stack : err
                                 }`
                             );
                         }
@@ -163,7 +163,7 @@ export function createTask({name, required = [], optional = []}, handler = null)
             }, (err) => {
                 Logger.error(
                     `${prefix}Errored '${Chalk.cyan(name)}': ${
-                        err.stack || err.message || err
+                        (err && err.stack) ? err.stack : err
                     }`
                 );
 
@@ -200,7 +200,7 @@ export function createRunner(task, defaultOptions) {
         return runSequential(Browser.getBrowsers(options.browser), (name) =>
             // Resolve browser
             Browser.resolve(options['package-dir'], name).catch((err) => {
-                Logger.error(`Unable to resolve browser(s): ${err.stack || err.message || err}`);
+                Logger.error(`Unable to resolve browser(s): ${(err && err.stack) ? err.stack : err}`);
                 return Promise.reject(err);
             }).then((browser) => {
                 // Try create new build environment
@@ -208,9 +208,9 @@ export function createRunner(task, defaultOptions) {
 
                 try {
                     environment = Environment.resolve(options.environment, browser, options);
-                } catch(e) {
+                } catch(err) {
                     Logger.error(
-                        `Unable to resolve "${options.environment}" environment: ${e && e.message ? e.message : e}`
+                        `Unable to resolve "${options.environment}" environment: ${(err && err.stack) ? err.stack : err}`
                     );
                     return Promise.resolve();
                 }
@@ -244,7 +244,7 @@ export function createRunner(task, defaultOptions) {
                 return task(browser, environment, options);
             })
         ).catch((err) => {
-            Logger.error(`Build failed: ${err && err.stack ? err.stack : err}`);
+            Logger.error(`Build failed: ${(err && err.stack) ? err.stack : err}`);
             Process.exit(1);
         });
     };
