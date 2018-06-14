@@ -210,7 +210,9 @@ export function createRunner(task, defaultOptions) {
                     environment = Environment.resolve(options.environment, browser, options);
                 } catch(err) {
                     Logger.error(
-                        `Unable to resolve "${options.environment}" environment: ${(err && err.stack) ? err.stack : err}`
+                        `Unable to resolve "${options.environment}" environment: ${
+                            (err && err.stack) ? err.stack : err
+                        }`
                     );
                     return Promise.resolve();
                 }
