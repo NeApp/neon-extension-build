@@ -1,7 +1,9 @@
+import Filesystem from 'fs-extra';
 import ForEach from 'lodash/forEach';
 import IsEqual from 'lodash/isEqual';
 import IsNil from 'lodash/isNil';
 import Keys from 'lodash/keys';
+import Path from 'path';
 import PickBy from 'lodash/pickBy';
 import SemanticVersion from 'semver';
 import Values from 'lodash/values';
@@ -119,6 +121,20 @@ export function validateModules(log, browser, environment, packageNode) {
             return Promise.resolve();
         }
 
+        let path = module.path;
+
+        // Use module source in production environments (if available)
+        if(environment.name === 'production') {
+            let modulePath = Path.join(browser.extension.path, '.modules', module.name);
+
+            if(!Filesystem.existsSync(modulePath)) {
+                log.info(`[${module.name}] Skipped (module source not available)`);
+                return Promise.resolve();
+            }
+
+            path = modulePath;
+        }
+
         // Retrieve package dependency
         let packageModuleNode = packageNode.get(module.name);
 
@@ -128,7 +144,7 @@ export function validateModules(log, browser, environment, packageNode) {
         }
 
         // Retrieve module dependency tree
-        return getDependencyTree(module.path).catch(() => null).then((moduleNode) => {
+        return getDependencyTree(path).catch(() => null).then((moduleNode) => {
             // Ensure cached requirements are up to date
             if(!IsEqual(packageModuleNode.requires, module.package.dependencies)) {
                 log.warn(`[${module.name}] Cached requirements are out of date`);
@@ -145,7 +161,8 @@ export function validateModules(log, browser, environment, packageNode) {
                 valid = false;
             }
         }).catch((err) => {
-            log.error(`[${module.name}] ${err}`);
+            log.error(`[${module.name}] ${err && err.stack ? err.stack : err}`);
+            valid = false;
         });
     }).then(() => {
         if(!valid) {
