@@ -19,7 +19,10 @@ export function parseLines(lines) {
         // Retrieve level
         let level = 'info';
 
-        if(line.indexOf('npm WARN ') === 0) {
+        if(line.indexOf('npm notice ') === 0) {
+            level = 'notice';
+            line = line.substring(11);
+        } else if(line.indexOf('npm WARN ') === 0) {
             level = 'warn';
             line = line.substring(9);
         } else if(line.indexOf('npm ERR! ') === 0) {
@@ -48,7 +51,9 @@ export function writeLines(log, lines, options = null) {
 
     // Write lines to logger
     ForEach(parseLines(lines), ({ level, line }) => {
-        if(level === 'warn') {
+        if(level === 'notice') {
+            log.debug(prefix + line);
+        } else if(level === 'warn') {
             log.warn(prefix + Chalk.yellow(line));
         } else if(level === 'error') {
             log.error(prefix + Chalk.red(line));
