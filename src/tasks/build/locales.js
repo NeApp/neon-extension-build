@@ -52,7 +52,7 @@ export const Locales = Task.create({
 
     // Copy locales to the build directory
     return Promise.all(Map(browser.modules, (module) => {
-        let localesPath = Path.join(module.path, 'locales');
+        let localesPath = Path.join(module.path, 'Locales');
 
         if(!Filesystem.existsSync(localesPath)) {
             return Promise.resolve();
