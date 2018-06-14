@@ -231,10 +231,15 @@ export function writePackageVersions(path, versions) {
     }
 
     // Read package details
-    return Filesystem.readJson(path).then((pkg) =>
+    return Filesystem.readFile(path).then((data) => {
+        let pkg = JSON.parse(data);
+
         // Write package details
-        Filesystem.writeJson(path, updatePackageVersions(pkg, versions))
-    );
+        return Filesystem.writeJson(path, updatePackageVersions(pkg, versions), {
+            EOL: data.indexOf('\r\n') >= 0 ? '\r\n' : '\n',
+            spaces: 2
+        });
+    });
 }
 
 export function updatePackageLockVersions(locks, versions) {
@@ -262,10 +267,15 @@ export function writePackageLockVersions(path, versions) {
     }
 
     // Read package locks
-    return Filesystem.readJson(path).then((locks) =>
+    return Filesystem.readFile(path).then((data) => {
+        let locks = JSON.parse(data);
+
         // Write package locks
-        Filesystem.writeJson(path, updatePackageLockVersions(locks, versions))
-    );
+        return Filesystem.writeJson(path, updatePackageLockVersions(locks, versions), {
+            EOL: data.indexOf('\r\n') >= 0 ? '\r\n' : '\n',
+            spaces: 2
+        });
+    });
 }
 
 export default {

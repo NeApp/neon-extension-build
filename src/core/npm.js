@@ -8,7 +8,7 @@ import Map from 'lodash/map';
 import {exec} from 'child_process';
 
 
-function parseLines(lines) {
+export function parseLines(lines) {
     if(IsNil(lines) || lines.length < 1) {
         return [];
     }
@@ -32,7 +32,7 @@ function parseLines(lines) {
     });
 }
 
-function writeLines(log, lines, options = null) {
+export function writeLines(log, lines, options = null) {
     options = {
         defaultColour: null,
         prefix: null,
@@ -137,7 +137,7 @@ export function install(cwd, name, options) {
         let cmd = 'npm install';
 
         if(!IsNil(name)) {
-            cmd = `npm install ${name}`;
+            cmd = `npm install "${name}"`;
         }
 
         exec(cmd, options, (err, stdout, stderr) => {
@@ -200,7 +200,7 @@ export function pack(cwd, path, options) {
     };
 
     return new Promise((resolve, reject) => {
-        exec(`npm pack ${path}`, options, (err, stdout, stderr) => {
+        exec(`npm pack "${path}"`, options, (err, stdout, stderr) => {
             if(!IsNil(err)) {
                 reject(err);
                 return;
@@ -217,6 +217,8 @@ export function pack(cwd, path, options) {
 
 export default {
     createHandler,
+    parseLines,
+    writeLines,
 
     dedupe,
     install,

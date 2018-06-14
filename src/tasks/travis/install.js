@@ -1,3 +1,4 @@
+import Chalk from 'chalk';
 import Filesystem from 'fs-extra';
 import GentleFS from 'gentle-fs';
 import Merge from 'lodash/merge';
@@ -10,7 +11,7 @@ import Github from '../../core/github';
 import Npm from '../../core/npm';
 import Vorpal from '../../core/vorpal';
 import {isBrowser} from '../../core/browser';
-import {getPackageModules, updatePackageVersions, updatePackageLockVersions} from '../../core/package';
+import {getPackageModules, writePackageVersions, writePackageLockVersions} from '../../core/package';
 import {resolveOne, runSequential} from '../../core/helpers/promise';
 
 
@@ -41,18 +42,18 @@ export function getBranches(current) {
 export function clone(target, branch, name) {
     let modulesPath = Path.join(target, '.modules');
 
-    // Remove directory (if it already exists)
-    if(Filesystem.existsSync(modulesPath)) {
-        Filesystem.removeSync(modulesPath);
-    }
+    // Build local module path
+    let localPath = Path.join(modulesPath, name);
 
-    // Ensure directory exists
-    Mkdirp.sync(modulesPath);
+    if(Filesystem.existsSync(localPath)) {
+        return Promise.resolve({
+            branch,
+            localPath
+        });
+    }
 
     // Install module
     return resolveOne(getBranches(branch), (branch) => Github.exists(name, branch).then(() => {
-        let localPath = Path.join(modulesPath, name);
-
         Vorpal.logger.info(
             `[NeApp/${name}#${branch}] Cloning to "${Path.relative(Process.cwd(), localPath)}...`
         );
@@ -105,29 +106,37 @@ function link(target, branch, name) {
 function pack(target, branch, name) {
     // Clone repository for module
     return clone(target, branch, name).then(({branch, localPath}) => {
-        Vorpal.logger.info(`[NeApp/${name}#${branch}] Packing module...`);
+        Vorpal.logger.info(`[NeApp/${name}#${branch}] Installing dependencies...`);
 
-        // Pack module
-        return Npm.pack(target, localPath).then(({ stdout, stderr }) => {
-            let lines = stdout.split('\n');
+        // Install dependencies
+        return Npm.install(localPath).then(
+            Npm.createHandler(Vorpal.logger, `[NeApp/${name}#${branch}]`)
+        ).then(() => {
+            Vorpal.logger.info(`[NeApp/${name}#${branch}] Packing module...`);
 
-            let file = lines[lines.length - 1];
+            // Pack module
+            return Npm.pack(target, localPath).then(({stdout, stderr}) => {
+                let lines = stdout.split('\n');
 
-            if(file.indexOf('neon-extension-') !== 0) {
-                Vorpal.logger.error(`[NeApp/${name}#${branch}] Invalid file: ${file}`);
-                return Promise.reject();
-            }
+                let file = lines[lines.length - 1];
 
-            Vorpal.logger.info(`[NeApp/${name}#${branch}] ${file}`);
+                if(file.indexOf('neon-extension-') !== 0) {
+                    Vorpal.logger.error(`[NeApp/${name}#${branch}] Invalid file: ${file}`);
+                    return Promise.reject();
+                }
 
-            if(stderr.length > 0) {
-                Vorpal.logger.warn(`[NeApp/${name}#${branch}] ${stderr}`);
-            }
+                Npm.writeLines(Vorpal.logger, stderr, {
+                    defaultColour: 'cyan',
+                    prefix: `[NeApp/${name}#${branch}]`
+                });
 
-            return file;
-        }).then((file) => ({
-            [name]: `file:${file}`
-        }));
+                Vorpal.logger.info(Chalk.green(`[NeApp/${name}#${branch}] ${file}`));
+
+                return file;
+            }).then((file) => ({
+                [name]: `file:${file}`
+            }));
+        });
     }).catch((err) => {
         Vorpal.logger.warn(`[NeApp/${name}#${branch}] Error raised: ${err.message || err}`);
         return Promise.reject(err);
@@ -141,10 +150,12 @@ function installBrowser(target, branch, modules) {
     ).then((results) => {
         let versions = Merge({}, ...results);
 
+        Vorpal.logger.info(`Updating ${Object.keys(versions).length} package version(s)...`);
+
         // Update package versions
         return Promise.resolve()
-            .then(() => updatePackageVersions(target, versions))
-            .then(() => updatePackageLockVersions(target, versions));
+            .then(() => writePackageVersions(target, versions))
+            .then(() => writePackageLockVersions(target, versions));
     });
 }
 
@@ -155,7 +166,27 @@ function installModule(target, branch, modules) {
     );
 }
 
-function install(target, branch) {
+function install(target, branch, options) {
+    options = {
+        reuse: false,
+
+        ...(options || {})
+    };
+
+    // Build modules path
+    let modulesPath = Path.join(target, '.modules');
+
+    // Remove modules directory (if not reusing modules, and one exists)
+    if(!options.reuse && Filesystem.existsSync(modulesPath)) {
+        Vorpal.logger.info('Removing existing modules...');
+
+        Filesystem.removeSync(modulesPath);
+    }
+
+    // Ensure directory exists
+    Mkdirp.sync(modulesPath);
+
+    // Read package details
     return Filesystem.readJson(Path.join(target, 'package.json')).then((pkg) => {
         let modules = getPackageModules(pkg);
 
@@ -170,16 +201,19 @@ function install(target, branch) {
 
         // Module
         return installModule(target, branch, modules);
-    }).then(() =>
+    }).then(() => {
+        Vorpal.logger.info('Installing package...');
+
         // Install package
-        Npm.install(target).then(
+        return Npm.install(target).then(
             Npm.createHandler(Vorpal.logger)
-        )
-    );
+        );
+    });
 }
 
 // Command
 let cmd = Vorpal.command('travis:install <branch>', 'Install travis environment.')
+    .option('--reuse', 'Re-use existing modules')
     .option('--target <target>', 'Target package [default: ./]');
 
 // Action
@@ -187,7 +221,7 @@ cmd.action(({branch, options}) => {
     let target = Path.resolve(options.target || Process.cwd());
 
     // Run task
-    return install(target, branch).catch((err) => {
+    return install(target, branch, options).catch((err) => {
         Vorpal.logger.error(err.stack || err.message || err);
         Process.exit(1);
     });
