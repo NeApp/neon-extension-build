@@ -11,7 +11,7 @@ import {GithubApi} from '../../../core/github';
 import {runSequential} from '../../../core/helpers/promise';
 
 
-const Editor = detectEditor();
+const Editor = detectEditor().catch(() => null);
 
 const GroupTitleRegex = /(Added|Changed|Fixed)\n/g;
 const NotesRegex = /(((Added|Changed|Fixed)\n( - .*\n)+\n?)+)/;
@@ -64,7 +64,13 @@ function openEditor(module, notes) {
     // Write release notes to path
     return Filesystem.writeFile(path, notes)
         // Detect editor path
-        .then(() => Editor)
+        .then(() => Editor.then((cmd) => {
+            if(IsNil(cmd)) {
+                return Promise.reject('Unable to detect editor');
+            }
+
+            return cmd;
+        }))
         // Open editor (to allow for the editing of release notes)
         .then((cmd) => new Promise((resolve, reject) => {
             ChildProcess.exec(`"${cmd}" --wait "${path}"`, (err) => {
