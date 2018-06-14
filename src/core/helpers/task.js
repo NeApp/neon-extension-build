@@ -243,7 +243,8 @@ export function createRunner(task, defaultOptions) {
                 // Run task
                 return task(browser, environment, options);
             })
-        ).catch(() => {
+        ).catch((err) => {
+            Logger.error(`Build failed: ${err && err.stack ? err.stack : err}`);
             Process.exit(1);
         });
     };
