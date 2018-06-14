@@ -156,13 +156,27 @@ function installBrowser(target, branch, modules) {
         return Promise.resolve()
             .then(() => writePackage(target, versions))
             .then(() => writePackageLocks(target, versions));
+    }).then(() => {
+        Vorpal.logger.info('Installing package...');
+
+        // Install package
+        return Npm.install(target).then(
+            Npm.createHandler(Vorpal.logger)
+        );
     });
 }
 
 function installModule(target, branch, modules) {
-    // Link modules
-    return runSequential(modules, (name) =>
-        link(target, branch, name)
+    Vorpal.logger.info('Installing dependencies...');
+
+    // Install dependencies
+    return Npm.install(target).then(
+        Npm.createHandler(Vorpal.logger)
+    ).then(() =>
+        // Link required modules
+        runSequential(modules, (name) =>
+            link(target, branch, name)
+        )
     );
 }
 
@@ -201,13 +215,6 @@ function install(target, branch, options) {
 
         // Module
         return installModule(target, branch, modules);
-    }).then(() => {
-        Vorpal.logger.info('Installing package...');
-
-        // Install package
-        return Npm.install(target).then(
-            Npm.createHandler(Vorpal.logger)
-        );
     }).then(() => {
         Vorpal.logger.info('Cleaning package...');
 
