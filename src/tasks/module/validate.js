@@ -173,12 +173,12 @@ export function validateModules(log, browser, environment, packageNode) {
                 valid = false;
             }
         }).catch((err) => {
-            log.error(`[${module.name}] ${err && err.stack ? err.stack : err}`);
+            log.error(`[${module.name}] ${(err && err.stack) ? err.stack : err}`);
             valid = false;
         });
     }).then(() => {
         if(!valid) {
-            return Promise.reject();
+            return Promise.reject(new Error('Validation failed'));
         }
 
         return Promise.resolve();
