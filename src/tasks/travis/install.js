@@ -11,7 +11,7 @@ import Github from '../../core/github';
 import Npm from '../../core/npm';
 import Vorpal from '../../core/vorpal';
 import {isBrowser} from '../../core/browser';
-import {getPackageModules, writePackageVersions, writePackageLockVersions} from '../../core/package';
+import {getPackageModules, writePackage, writePackageLocks} from '../../core/package';
 import {resolveOne, runSequential} from '../../core/helpers/promise';
 
 
@@ -154,8 +154,8 @@ function installBrowser(target, branch, modules) {
 
         // Update package versions
         return Promise.resolve()
-            .then(() => writePackageVersions(target, versions))
-            .then(() => writePackageLockVersions(target, versions));
+            .then(() => writePackage(target, versions))
+            .then(() => writePackageLocks(target, versions));
     });
 }
 
@@ -208,6 +208,11 @@ function install(target, branch, options) {
         return Npm.install(target).then(
             Npm.createHandler(Vorpal.logger)
         );
+    }).then(() => {
+        Vorpal.logger.info('Cleaning package...');
+
+        // Clean "package-lock.json" (remove "integrity" field from modules)
+        return writePackageLocks(target);
     });
 }
 

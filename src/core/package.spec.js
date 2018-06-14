@@ -1,10 +1,10 @@
-import {updatePackageVersions, updatePackageLockVersions} from './package';
+import {updatePackage, updatePackageLocks} from './package';
 
 
 describe('Package', () => {
-    describe('updatePackageVersions', () => {
+    describe('updatePackage', () => {
         it('should update dependencies', () => {
-            expect(updatePackageVersions({
+            expect(updatePackage({
                 name: 'neon-extension-chrome',
 
                 dependencies: {
@@ -29,7 +29,7 @@ describe('Package', () => {
         });
 
         it('should update peer dependencies', () => {
-            expect(updatePackageVersions({
+            expect(updatePackage({
                 name: 'neon-extension-chrome',
 
                 dependencies: {
@@ -62,9 +62,48 @@ describe('Package', () => {
         });
     });
 
-    describe('updatePackageLockVersions', () => {
+    describe('updatePackageLocks', () => {
+        it('should remove "integrity" fields', () => {
+            expect(updatePackageLocks({
+                name: 'neon-extension-chrome',
+
+                dependencies: {
+                    'neon-extension-core': {
+                        version: '1.9.0',
+                        integrity: 'test'
+                    },
+                    'neon-extension-framework': {
+                        version: '1.9.0'
+                    },
+                    'neon-extension-destination-lastfm': {
+                        version: '1.9.0'
+                    },
+                    'neon-extension-destination-librefm': {
+                        version: '1.9.0'
+                    }
+                }
+            })).toEqual({
+                name: 'neon-extension-chrome',
+
+                dependencies: {
+                    'neon-extension-core': {
+                        version: '1.9.0'
+                    },
+                    'neon-extension-framework': {
+                        version: '1.9.0'
+                    },
+                    'neon-extension-destination-lastfm': {
+                        version: '1.9.0'
+                    },
+                    'neon-extension-destination-librefm': {
+                        version: '1.9.0'
+                    }
+                }
+            });
+        });
+
         it('should update dependencies', () => {
-            expect(updatePackageLockVersions({
+            expect(updatePackageLocks({
                 name: 'neon-extension-chrome',
 
                 dependencies: {

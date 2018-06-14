@@ -199,7 +199,7 @@ export function readPackageDetails(path) {
     });
 }
 
-export function updatePackageVersions(pkg, versions) {
+export function updatePackage(pkg, versions) {
     function updateVersions(dependencies) {
         if(IsNil(dependencies)) {
             return dependencies;
@@ -225,7 +225,7 @@ export function updatePackageVersions(pkg, versions) {
     return pkg;
 }
 
-export function writePackageVersions(path, versions) {
+export function writePackage(path, versions) {
     if(Filesystem.statSync(path).isDirectory()) {
         path = Path.join('package.json');
     }
@@ -235,33 +235,44 @@ export function writePackageVersions(path, versions) {
         let pkg = JSON.parse(data);
 
         // Write package details
-        return Filesystem.writeJson(path, updatePackageVersions(pkg, versions), {
+        return Filesystem.writeJson(path, updatePackage(pkg, versions), {
             EOL: data.indexOf('\r\n') >= 0 ? '\r\n' : '\n',
             spaces: 2
         });
     });
 }
 
-export function updatePackageLockVersions(locks, versions) {
+export function updatePackageLocks(locks, versions = null) {
+    versions = versions || {};
+
+    // Update package locks
     return {
         ...locks,
 
         dependencies: {
             ...locks.dependencies,
 
-            // Update dependencies
-            ...MapValues(PickBy(versions, (_, name) =>
-                !IsNil(locks.dependencies[name])
-            ), (version, name) => ({
-                ...locks.dependencies[name],
+            // Update modules
+            ...MapValues(PickBy(locks.dependencies, (_, name) =>
+                name.indexOf('neon-extension-') === 0
+            ), (dependency, name) => {
+                // Update version (if provided)
+                if(!IsNil(versions[name])) {
+                    dependency.version = versions[name];
+                }
 
-                version
-            }))
+                // Ensure "integrity" field hasn't been defined
+                if(!IsNil(dependency.integrity)) {
+                    delete dependency.integrity;
+                }
+
+                return dependency;
+            })
         }
     };
 }
 
-export function writePackageLockVersions(path, versions) {
+export function writePackageLocks(path, versions) {
     if(Filesystem.statSync(path).isDirectory()) {
         path = Path.join('package-lock.json');
     }
@@ -271,7 +282,7 @@ export function writePackageLockVersions(path, versions) {
         let locks = JSON.parse(data);
 
         // Write package locks
-        return Filesystem.writeJson(path, updatePackageLockVersions(locks, versions), {
+        return Filesystem.writeJson(path, updatePackageLocks(locks, versions), {
             EOL: data.indexOf('\r\n') >= 0 ? '\r\n' : '\n',
             spaces: 2
         });
@@ -286,9 +297,9 @@ export default {
     readPackageDetails,
     readPackageModules,
 
-    updatePackageVersions,
-    updatePackageLockVersions,
+    updatePackage,
+    updatePackageLocks,
 
-    writePackageVersions,
-    writePackageLockVersions
+    writePackage,
+    writePackageLocks
 };
