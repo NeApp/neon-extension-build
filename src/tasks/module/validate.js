@@ -143,8 +143,20 @@ export function validateModules(log, browser, environment, packageNode) {
             return Promise.reject();
         }
 
+        // Ensure "package-lock.json" exists
+        if(!Filesystem.existsSync(Path.join(path, 'package-lock.json'))) {
+            log.info(`[${module.name}] Skipped (no "package-lock.json" file exists)`);
+            return Promise.resolve();
+        }
+
         // Retrieve module dependency tree
         return getDependencyTree(path).catch(() => null).then((moduleNode) => {
+            if(IsNil(moduleNode)) {
+                log.error(`[${module.name}] Unable to parse "package-lock.json" file`);
+                valid = false;
+                return;
+            }
+
             // Ensure cached requirements are up to date
             if(!IsEqual(packageModuleNode.requires, module.package.dependencies)) {
                 log.warn(`[${module.name}] Cached requirements are out of date`);
