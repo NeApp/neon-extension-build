@@ -104,6 +104,12 @@ export function validateDependencies(packages, tree, prefix = null) {
             return;
         }
 
+        // Ensure modules have no "integrity" field defined
+        if(name.indexOf('neon-extension-') === 0 && !IsNil(dependency.integrity)) {
+            logError(`[${path}] "integrity" field shouldn\'t be defined`);
+            success = false;
+        }
+
         // Ensure dependency matches
         if(pkg.version !== dependency.version) {
             logError(`[${path}] found ${pkg.version}, expected ${dependency.version}`, ignored);

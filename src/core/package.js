@@ -14,12 +14,12 @@ import Values from 'lodash/values';
 export class Dependency {
     constructor(values) {
         // Parse values
-        let {name, version, requires, parent} = {
+        let {name, version, requires, parent, extras} = {
             name: null,
             version: null,
             requires: {},
-
             parent: null,
+            extras: {},
 
             ...(values || {})
         };
@@ -38,8 +38,13 @@ export class Dependency {
         this.version = version;
         this.requires = requires;
         this.parent = parent;
+        this.extras = extras;
 
         this.dependencies = {};
+    }
+
+    get integrity() {
+        return this.extras.integrity || null;
     }
 
     get(name) {
@@ -71,7 +76,7 @@ export function createDependencyTree(dependency, options = null) {
     };
 
     // Parse dependency
-    let {name, version, requires, dependencies} = {
+    let {name, version, requires, dependencies, ...extras} = {
         name: options.name,
         version: null,
         requires: {},
@@ -85,6 +90,7 @@ export function createDependencyTree(dependency, options = null) {
         name,
         version,
         requires,
+        extras,
 
         parent: options.parent
     });
