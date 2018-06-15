@@ -142,7 +142,7 @@ export class Git {
                     return;
                 }
 
-                resolve(description.trim());
+                resolve(description && description.trim());
             });
         });
     }
@@ -168,7 +168,7 @@ export class Git {
                     return;
                 }
 
-                resolve(hash.trim());
+                resolve(hash && hash.trim());
             });
         });
     }
