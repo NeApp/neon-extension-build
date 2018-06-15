@@ -1,6 +1,5 @@
 import Chalk from 'chalk';
 import Filesystem from 'fs-extra';
-import GentleFS from 'gentle-fs';
 import Merge from 'lodash/merge';
 import Mkdirp from 'mkdirp';
 import Path from 'path';
@@ -8,6 +7,7 @@ import Process from 'process';
 
 import Git from '../../core/git';
 import Github from '../../core/github';
+import Link from '../../core/link';
 import Npm from '../../core/npm';
 import Vorpal from '../../core/vorpal';
 import {isBrowser} from '../../core/browser';
@@ -80,22 +80,10 @@ function link(target, branch, name) {
         ).then(() => {
             Vorpal.logger.info(`[NeApp/${name}#${branch}] Linking to "node_modules/${name}"...`);
 
-            return new Promise((resolve, reject) => {
-                // Create symbolic link to module
-                GentleFS.link(localPath, `${target}/node_modules/${name}`, {
-                    prefixes: [
-                        `${target}/.modules/`,
-                        `${target}/node_modules/`
-                    ]
-                }, (err) => {
-                    if(err) {
-                        reject(err);
-                        return;
-                    }
-
-                    resolve();
-                });
-            });
+            return Link.create(`${target}/node_modules/${name}`, localPath, [
+                `${target}/.modules/`,
+                `${target}/node_modules/`
+            ]);
         });
     }).catch((err) => {
         Vorpal.logger.warn(`[NeApp/${name}#${branch}] Error raised: ${err.message || err}`);
