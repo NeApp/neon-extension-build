@@ -13,6 +13,7 @@ import Module from './module';
 import Travis from './travis';
 import Vorpal from './vorpal';
 import {readPackageDetails} from './package';
+import PadEnd from 'lodash/padEnd';
 
 
 const Logger = Vorpal.logger;
@@ -62,7 +63,7 @@ function isDirty({repository, modules}) {
     return false;
 }
 
-function parseManifest(name, data) {
+function parseExtensionManifest(name, data) {
     return Merge(CloneDeep(BaseManifest), {
         ...CloneDeep(data),
 
@@ -81,7 +82,7 @@ function parseManifest(name, data) {
     });
 }
 
-function readManifest(extension, path, channel = null) {
+function readExtensionManifest(extension, path, channel = null) {
     let name = 'extension.json';
 
     if(!IsNil(channel)) {
@@ -102,15 +103,15 @@ function readManifest(extension, path, channel = null) {
     ));
 }
 
-function getManifest(extension, path) {
-    return readManifest(extension, path).then(
-        (manifest) => parseManifest(extension.name, manifest),
-        () => parseManifest(extension.name, {})
+function getExtensionManifest(extension, path) {
+    return readExtensionManifest(extension, path).then(
+        (manifest) => parseExtensionManifest(extension.name, manifest),
+        () => parseExtensionManifest(extension.name, {})
     );
 }
 
-function overlayManifest(extension, path) {
-    return readManifest(extension, path, extension.channel).then((manifest) => {
+function overlayExtensionManifest(extension, path) {
+    return readExtensionManifest(extension, path, extension.channel).then((manifest) => {
         if(!IsNil(manifest.modules)) {
             return Promise.reject(new Error(
                 '"modules" in manifest overlays are not permitted'
@@ -121,6 +122,18 @@ function overlayManifest(extension, path) {
             ...extension.manifest,
             ...manifest
         };
+    });
+}
+
+function getBuildManifest(path) {
+    return Json.read(Path.join(path, 'build.json'), {}).then((manifest) => {
+        if(!IsPlainObject(manifest)) {
+            return Promise.reject(new Error(
+                'Expected build manifest to be a plain object'
+            ));
+        }
+
+        return manifest;
     });
 }
 
@@ -147,11 +160,17 @@ export function resolve(packageDir, path, name) {
             };
         }))
         // Resolve extension manifest
-        .then((extension) => getManifest(extension, path).then((manifest) => ({
+        .then((extension) => getExtensionManifest(extension, path).then((manifest) => ({
             ...extension,
             ...manifest,
 
             manifest
+        })))
+        // Resolve build manifest
+        .then((extension) => getBuildManifest(path).then((build) => ({
+            ...extension,
+
+            build
         })))
         // Resolve repository status
         .then((extension) => Promise.resolve().then(() => {
@@ -159,6 +178,18 @@ export function resolve(packageDir, path, name) {
                 return extension.repository;
             }
 
+            // Return repository status from the build manifest
+            if(!IsNil(extension.build[name])) {
+                if(!IsNil(extension.build[name].repository)) {
+                    return extension.build[name].repository;
+                }
+
+                Logger.warn(Chalk.yellow(
+                    `[${PadEnd(name, 40)}] No repository status available in the build manifest`
+                ));
+            }
+
+            // Resolve repository status
             return Git.status(path, extension.package.version).catch(() => ({
                 ahead: 0,
                 dirty: false,
@@ -190,6 +221,18 @@ export function resolve(packageDir, path, name) {
                 return extension.travis;
             }
 
+            // Return travis status from the build manifest
+            if(!IsNil(extension.build[name])) {
+                if(!IsNil(extension.build[name].travis)) {
+                    return extension.build[name].travis;
+                }
+
+                Logger.warn(Chalk.yellow(
+                    `[${PadEnd(name, 40)}] No travis status available in the build manifest`
+                ));
+            }
+
+            // Resolve travis status
             return Travis.status();
         }).then((travis) => ({
             ...extension,
@@ -223,7 +266,7 @@ export function resolve(packageDir, path, name) {
             channel: getBuildChannel(extension)
         }))
         // Resolve extension manifest overlay
-        .then((extension) => overlayManifest(extension, path).then((manifest) => ({
+        .then((extension) => overlayExtensionManifest(extension, path).then((manifest) => ({
             ...extension,
 
             // Extension

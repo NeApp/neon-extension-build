@@ -1,3 +1,4 @@
+import MapValues from 'lodash/mapValues';
 import Path from 'path';
 import Pick from 'lodash/pick';
 
@@ -9,23 +10,19 @@ import {createZip} from '../../core/zip';
 
 const Pattern = '{Assets/**/*,*.json,*.md,.*}';
 
-function updateExtensionManifest(browser, environment) {
-    let path = Path.join(environment.output.source, 'extension.json');
+function writeBuildDetails(browser, environment) {
+    let path = Path.join(environment.output.source, 'build.json');
 
-    // Read extension manifest from `path`
-    return Json.read(path).then((pkg) =>
-        // Update extension manifest, and write back to `path`
-        Json.write(path, {
-            ...pkg,
+    // Write build details
+    Json.write(path, MapValues(browser.modules, (module) => {
+        if(module.type === 'package') {
+            return Pick(module, ['repository', 'travis']);
+        }
 
-            ...Pick(browser.extension, [
-                'repository',
-                'travis'
-            ])
-        }, {
-            spaces: 2
-        })
-    );
+        return Pick(module, ['repository']);
+    }), {
+        spaces: 2
+    });
 }
 
 export const SourceArchiveTask = Task.create({
@@ -38,8 +35,8 @@ export const SourceArchiveTask = Task.create({
 }, (log, browser, environment) => {
     // Copy browser sources to the build directory
     return Copy(Pattern, browser.path, environment.output.source)
-        // Update extension manifest
-        .then(() => updateExtensionManifest(browser, environment))
+        // Write build details
+        .then(() => writeBuildDetails(browser, environment))
         // Create an archive of browser sources
         .then(() => createZip({
             archive: Path.join(environment.buildPath, `Neon-${browser.title}-${browser.versionName}-sources.zip`),

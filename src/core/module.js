@@ -1,3 +1,4 @@
+import Chalk from 'chalk';
 import Filesystem from 'fs-extra';
 import ForEach from 'lodash/forEach';
 import IsNil from 'lodash/isNil';
@@ -6,6 +7,7 @@ import KeyBy from 'lodash/keyBy';
 import MapValues from 'lodash/mapValues';
 import Merge from 'lodash/merge';
 import Omit from 'lodash/omit';
+import PadEnd from 'lodash/padEnd';
 import Path from 'path';
 import Pick from 'lodash/pick';
 import Reduce from 'lodash/reduce';
@@ -13,8 +15,11 @@ import Uniq from 'lodash/uniq';
 
 import Git from './git';
 import Version from './version';
+import Vorpal from './vorpal';
 import {readPackageDetails} from './package';
 
+
+const Logger = Vorpal.logger;
 
 const ModuleType = {
     'core': {
@@ -207,7 +212,26 @@ export function resolve(extension, path, type, name) {
                 return extension.repository;
             }
 
-            return Git.status(module.path, module.package.version).catch(() => ({
+            // Return repository status from the build manifest
+            if(!IsNil(extension.build[module.name])) {
+                if(!IsNil(extension.build[module.name].repository)) {
+                    return extension.build[module.name].repository;
+                }
+
+                Logger.warn(Chalk.yellow(
+                    `[${PadEnd(module.name, 40)}] No repository status available in the build manifest`
+                ));
+            }
+
+            // Find repository
+            let path = Path.join(extension.path, '.modules', module.name);
+
+            if(!Filesystem.existsSync(path)) {
+                path = module.path;
+            }
+
+            // Resolve repository status
+            return Git.status(path, module.package.version).catch(() => ({
                 ahead: 0,
                 dirty: false,
 
