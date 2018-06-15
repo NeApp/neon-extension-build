@@ -12,6 +12,7 @@ import Path from 'path';
 import Pick from 'lodash/pick';
 import Reduce from 'lodash/reduce';
 import Uniq from 'lodash/uniq';
+import Util from 'util';
 
 import Git from './git';
 import Version from './version';
@@ -241,21 +242,30 @@ export function resolve(extension, path, type, name) {
                 tag: null,
                 latestTag: null
             }));
-        }).then((repository) => ({
-            ...module,
+        }).then((repository) => {
+            Logger.debug(`[${PadEnd(name, 40)}] Repository: ${Util.inspect(repository)}`);
 
-            // Module
-            ...Pick(repository, [
-                'branch',
-                'commit',
+            if(IsNil(repository.commit) && !repository.dirty) {
+                Logger.error(Chalk.red(`[${PadEnd(module.name, 40)}] Invalid repository status (no commit defined)`));
+                return Promise.reject();
+            }
 
-                'tag',
-                'latestTag'
-            ]),
+            return {
+                ...module,
 
-            // Repository
-            repository
-        })))
+                // Module
+                ...Pick(repository, [
+                    'branch',
+                    'commit',
+
+                    'tag',
+                    'latestTag'
+                ]),
+
+                // Repository
+                repository
+            };
+        }))
         // Resolve travis status (for package modules)
         .then((module) => {
             if(module.type !== 'package') {

@@ -6,6 +6,7 @@ import Merge from 'lodash/merge';
 import Omit from 'lodash/omit';
 import Path from 'path';
 import Pick from 'lodash/pick';
+import Util from 'util';
 
 import Git from './git';
 import Json from './json';
@@ -200,21 +201,30 @@ export function resolve(packageDir, path, name) {
                 tag: null,
                 latestTag: null
             }));
-        }).then((repository) => ({
-            ...extension,
+        }).then((repository) => {
+            Logger.debug(`[${PadEnd(name, 40)}] Repository: ${Util.inspect(repository)}`);
 
-            // Extension
-            ...Pick(repository, [
-                'branch',
-                'commit',
+            if(IsNil(repository.commit) && !repository.dirty) {
+                Logger.error(Chalk.red(`[${PadEnd(name, 40)}] Invalid repository status (no commit defined)`));
+                return Promise.reject();
+            }
 
-                'tag',
-                'latestTag'
-            ]),
+            return {
+                ...extension,
 
-            // Repository
-            repository
-        })))
+                // Extension
+                ...Pick(repository, [
+                    'branch',
+                    'commit',
+
+                    'tag',
+                    'latestTag'
+                ]),
+
+                // Repository
+                repository
+            };
+        }))
         // Resolve travis status
         .then((extension) => Promise.resolve().then(() => {
             if(!IsNil(extension.travis)) {
@@ -234,19 +244,23 @@ export function resolve(packageDir, path, name) {
 
             // Resolve travis status
             return Travis.status();
-        }).then((travis) => ({
-            ...extension,
+        }).then((travis) => {
+            Logger.debug(`[${PadEnd(name, 40)}] Travis: ${Util.inspect(travis)}`);
 
-            // Extension
-            ...Pick(travis, [
-                'branch',
-                'commit',
-                'tag'
-            ]),
+            return {
+                ...extension,
 
-            // Travis
-            travis
-        })))
+                // Extension
+                ...Pick(travis, [
+                    'branch',
+                    'commit',
+                    'tag'
+                ]),
+
+                // Travis
+                travis
+            };
+        }))
         // Resolve modules
         .then((extension) => Module.resolveMany(packageDir, extension).then((modules) => ({
             ...extension,
