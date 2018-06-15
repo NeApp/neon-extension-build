@@ -1,9 +1,14 @@
+import Chalk from 'chalk';
 import Filesystem from 'fs';
 import IsNil from 'lodash/isNil';
 import Path from 'path';
 import SimpleGit from 'simple-git';
 import SortBy from 'lodash/sortBy';
 
+import Vorpal from './vorpal';
+
+
+const Logger = Vorpal.logger;
 
 export class Git {
     clone(path, repoPath, localPath, options) {
@@ -50,8 +55,11 @@ export class Git {
     }
 
     status(path) {
+        Logger.debug(`Fetching status of repository: ${path}`);
+
         // Ensure repository exists
         if(!Filesystem.existsSync(Path.join(path, '.git'))) {
+            Logger.warn(Chalk.yellow(`No repository available at: ${path}`));
             return Promise.resolve({});
         }
 
@@ -142,7 +150,11 @@ export class Git {
                     return;
                 }
 
-                resolve(description && description.trim());
+                if(!IsNil(description) && description.length > 0) {
+                    resolve(description.trim());
+                } else {
+                    resolve(null);
+                }
             });
         });
     }
@@ -168,7 +180,11 @@ export class Git {
                     return;
                 }
 
-                resolve(hash && hash.trim());
+                if(!IsNil(hash) && hash.length > 0) {
+                    resolve(hash.trim());
+                } else {
+                    resolve(null);
+                }
             });
         });
     }
