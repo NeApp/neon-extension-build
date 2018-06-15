@@ -233,7 +233,7 @@ export function updatePackage(pkg, versions) {
 
 export function writePackage(path, versions) {
     if(Filesystem.statSync(path).isDirectory()) {
-        path = Path.join('package.json');
+        path = Path.join(path, 'package.json');
     }
 
     // Read package details
@@ -280,7 +280,7 @@ export function updatePackageLocks(locks, versions = null) {
 
 export function writePackageLocks(path, versions) {
     if(Filesystem.statSync(path).isDirectory()) {
-        path = Path.join('package-lock.json');
+        path = Path.join(path, 'package-lock.json');
     }
 
     // Read package locks
