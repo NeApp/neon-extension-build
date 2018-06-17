@@ -62,7 +62,7 @@ export class Git {
             ...(options || {})
         };
 
-        Logger.debug(`Fetching status of repository: ${path} (${Util.inspect(options)}`);
+        Logger.debug(`Fetching status of repository: ${path} ${Util.inspect(options)}`);
 
         // Ensure repository exists
         if(!Filesystem.existsSync(Path.join(path, '.git'))) {
