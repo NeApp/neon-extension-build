@@ -60,8 +60,7 @@ export function clone(target, branch, name) {
 
         // Clone repository
         return Git.clone(modulesPath, `https://github.com/NeApp/${name}.git`, localPath, [
-            '-b', branch,
-            '--depth', '1'
+            '-b', branch
         ]).then(() => ({
             branch,
             localPath
