@@ -4,6 +4,7 @@ import ForEach from 'lodash/forEach';
 import IsNil from 'lodash/isNil';
 import IsPlainObject from 'lodash/isPlainObject';
 import KeyBy from 'lodash/keyBy';
+import Map from 'lodash/map';
 import MapValues from 'lodash/mapValues';
 import Merge from 'lodash/merge';
 import Omit from 'lodash/omit';
@@ -18,6 +19,7 @@ import Git from './git';
 import Version from './version';
 import Vorpal from './vorpal';
 import {readPackageDetails} from './package';
+import {runSequential} from './helpers/promise';
 
 
 const Logger = Vorpal.logger;
@@ -309,17 +311,18 @@ export function resolve(extension, path, type, name) {
 }
 
 export function resolveMany(path, extension) {
-    // Resolve each module
-    return Promise.all(Reduce(extension.modules, (promises, names, type) => {
-        promises.push(resolve(extension, path, 'tool', 'neon-extension-build'));
+    // Resolve each module sequentially
+    return runSequential(Reduce(extension.modules, (modules, names, type) => {
+        modules.push(...Map(names, (name) => {
+            return { type, name };
+        }));
 
-        // Add enabled modules
-        ForEach(names, (name) => {
-            promises.push(resolve(extension, path, type, name));
-        });
-
-        return promises;
-    }, [])).then((modules) => {
+        return modules;
+    }, [
+        { type: 'tool', name: 'neon-extension-build' }
+    ]), ({ type, name }) =>
+        resolve(extension, path, type, name)
+    ).then((modules) => {
         return KeyBy(modules, 'name');
     });
 }
