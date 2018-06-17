@@ -232,7 +232,9 @@ export function resolve(extension, path, type, name) {
             }
 
             // Resolve repository status
-            return Git.status(path, module.package.version).catch(() => ({
+            return Git.status(path, {
+                debug: true
+            }).catch(() => ({
                 ahead: 0,
                 dirty: false,
 

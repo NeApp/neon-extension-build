@@ -4,6 +4,7 @@ import IsNil from 'lodash/isNil';
 import Path from 'path';
 import SimpleGit from 'simple-git';
 import SortBy from 'lodash/sortBy';
+import Util from 'util';
 
 import Vorpal from './vorpal';
 
@@ -54,8 +55,14 @@ export class Git {
         });
     }
 
-    status(path) {
-        Logger.debug(`Fetching status of repository: ${path}`);
+    status(path, options) {
+        options = {
+            debug: false,
+
+            ...(options || {})
+        };
+
+        Logger.debug(`Fetching status of repository: ${path} (${Util.inspect(options)}`);
 
         // Ensure repository exists
         if(!Filesystem.existsSync(Path.join(path, '.git'))) {
@@ -64,7 +71,7 @@ export class Git {
         }
 
         // Create repository instance
-        let repository = SimpleGit(path).silent(true);
+        let repository = SimpleGit(path).silent(!options.debug);
 
         // Retrieve repository status
         return Promise.resolve({})

@@ -191,7 +191,9 @@ export function resolve(packageDir, path, name) {
             }
 
             // Resolve repository status
-            return Git.status(path, extension.package.version).catch(() => ({
+            return Git.status(path, {
+                debug: true
+            }).catch(() => ({
                 ahead: 0,
                 dirty: false,
 
