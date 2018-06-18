@@ -1,5 +1,6 @@
 import Chalk from 'chalk';
 import Filesystem from 'fs-extra';
+import IsNil from 'lodash/isNil';
 import Merge from 'lodash/merge';
 import Mkdirp from 'mkdirp';
 import Path from 'path';
@@ -68,25 +69,74 @@ export function clone(target, branch, name) {
     }));
 }
 
-function link(target, branch, name) {
+function link(target, branch, module) {
     // Clone repository for module
-    return clone(target, branch, name).then(({branch, localPath}) => {
-        Vorpal.logger.info(`[NeApp/${name}#${branch}] Installing dependencies...`);
+    return clone(target, branch, module).then(({branch, modulePath}) => {
+        Vorpal.logger.info(`[NeApp/${module}#${branch}] Installing dependencies...`);
 
         // Install dependencies
-        return Npm.install(localPath).then(
-            Npm.createHandler(Vorpal.logger, `[NeApp/${name}#${branch}]`)
+        return Npm.install(modulePath).then(
+            Npm.createHandler(Vorpal.logger, `[NeApp/${module}#${branch}]`)
         ).then(() => {
-            Vorpal.logger.info(`[NeApp/${name}#${branch}] Linking to "node_modules/${name}"...`);
+            let linkPath = `${target}/node_modules/${module}`;
 
-            return Link.create(`${target}/node_modules/${name}`, localPath, [
+            Vorpal.logger.info(`[NeApp/${module}#${branch}] "${linkPath}" -> "${modulePath}"`);
+
+            // Create link
+            return Link.create(linkPath, modulePath, [
                 `${target}/.modules/`,
                 `${target}/node_modules/`
             ]);
         });
     }).catch((err) => {
-        Vorpal.logger.warn(`[NeApp/${name}#${branch}] Error raised: ${err.message || err}`);
+        Vorpal.logger.warn(`[NeApp/${module}#${branch}] Error raised: ${err.message || err}`);
         return Promise.reject(err);
+    });
+}
+
+function linkModuleDependencies(target, branch, modules) {
+    return runSequential(modules, (module) => {
+        let modulePath = Path.join(target, '.modules', module);
+
+        // Ensure module exists
+        if(!Filesystem.existsSync(modulePath)) {
+            return Promise.reject(new Error(`Unable to find module: ${module}`));
+        }
+
+        Vorpal.logger.info(`[NeApp/${module}#${branch}] Linking module dependencies...`);
+
+        // Read "package.json" file
+        return Filesystem.readJson(Path.join(modulePath, 'package.json')).then((pkg) => {
+            if(IsNil(pkg) || IsNil(pkg.peerDependencies)) {
+                return Promise.resolve();
+            }
+
+            return runSequential(Object.keys(pkg.peerDependencies), (name) => {
+                if(name.indexOf('neon-extension-') !== 0) {
+                    return Promise.resolve();
+                }
+
+                let path = Path.join(target, '.modules', name);
+
+                // Ensure module exists
+                if(!Filesystem.existsSync(path)) {
+                    return Promise.reject(new Error(`Unable to find module: ${name}`));
+                }
+
+                let linkPath = Path.join(modulePath, 'node_modules', name);
+
+                Vorpal.logger.info(`[NeApp/${module}#${branch}] "${linkPath}" -> "${path}"`);
+
+                // Create link to module
+                return Link.create(linkPath, path, [
+                    `${modulePath}/node_modules/`,
+                    `${target}/.modules/`
+                ]);
+            });
+        }).catch((err) => {
+            Vorpal.logger.warn(`[NeApp/${module}#${branch}] Error raised: ${err.message || err}`);
+            return Promise.reject(err);
+        });
     });
 }
 
@@ -144,6 +194,11 @@ function installBrowser(target, branch, modules) {
             .then(() => writePackage(target, versions))
             .then(() => writePackageLocks(target, versions));
     }).then(() => {
+        Vorpal.logger.info('Linking module dependencies...');
+
+        // Link module dependencies
+        return linkModuleDependencies(target, branch, modules);
+    }).then(() => {
         Vorpal.logger.info('Installing package...');
 
         // Install package
@@ -159,12 +214,19 @@ function installModule(target, branch, modules) {
     // Install dependencies
     return Npm.install(target).then(
         Npm.createHandler(Vorpal.logger)
-    ).then(() =>
-        // Link required modules
-        runSequential(modules, (name) =>
+    ).then(() => {
+        Vorpal.logger.info('Linking module dependencies...');
+
+        // Link module dependencies
+        return linkModuleDependencies(target, branch, modules);
+    }).then(() => {
+        Vorpal.logger.info('Linking modules...');
+
+        // Link modules
+        return runSequential(modules, (name) =>
             link(target, branch, name)
-        )
-    );
+        );
+    });
 }
 
 function install(target, branch, options) {
