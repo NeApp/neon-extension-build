@@ -74,9 +74,9 @@ export function writeLines(log, lines, options = null) {
     });
 }
 
-export function run(path, cmd, options) {
+export function run(cwd, cmd, options) {
     options = {
-        cwd: path,
+        cwd,
 
         ...(options || {})
     };
@@ -178,21 +178,8 @@ export function encodeOptions(options) {
     }).join(' ');
 }
 
-export function dedupe(options) {
-    return new Promise((resolve, reject) => {
-        exec('npm dedupe', options, (err, stdout, stderr) => {
-            if(!IsNil(err)) {
-                reject(err);
-                return;
-            }
-
-            // Resolve promise
-            resolve({
-                stdout: stdout.trim(),
-                stderr: stderr.trim()
-            });
-        });
-    });
+export function dedupe(cwd, options) {
+    return run(cwd, 'dedupe', options);
 }
 
 export function install(cwd, name, options) {
@@ -229,14 +216,14 @@ export function install(cwd, name, options) {
     });
 }
 
-export function list(path, options) {
+export function list(cwd, options) {
     let cmd = 'ls';
 
     if(!IsNil(options)) {
         cmd += ` ${encodeOptions(options)}`;
     }
 
-    return run(path, cmd, {
+    return run(cwd, cmd, {
         maxBuffer: 1024 * 1024 // 1 MB
     });
 }
