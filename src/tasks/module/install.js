@@ -1,6 +1,5 @@
 import Filter from 'lodash/filter';
 import IsNil from 'lodash/isNil';
-import Map from 'lodash/map';
 import Values from 'lodash/values';
 
 import Npm from '../../core/npm';
