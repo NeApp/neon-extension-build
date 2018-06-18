@@ -5,8 +5,8 @@ import './tasks';
 
 
 process.on('unhandledRejection', (reason, p) => {
-    console.log('Unhandled rejection for promise:', p);
-    console.log(' - reason:', reason);
+    Vorpal.logger.error('Unhandled rejection for promise:', p);
+    Vorpal.logger.error(' - reason:', reason);
 
     // Exit process
     process.exit(1);
