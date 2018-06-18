@@ -187,7 +187,7 @@ export function createRunner(task, defaultOptions) {
             ...options,
 
             // Resolve directories
-            'build-dir': Path.resolve(process.cwd(), options['build-dir'] || './build'),
+            'build-dir': Path.resolve(process.cwd(), options['build-dir'] || './Build'),
             'package-dir': Path.resolve(process.cwd(), options['package-dir'] || './')
         };
 
@@ -270,7 +270,7 @@ export function create({name, description, required, optional, command}, handler
 
     // Create command
     command(Vorpal.command(name, description))
-        .option('--build-dir <build-dir>', 'Build Directory [default: ./build]')
+        .option('--build-dir <build-dir>', 'Build Directory [default: ./Build]')
         .option('--package-dir <package-dir>', 'Package Directory [default: ./]')
         .option('--browser <browser>', 'Browser [default: all]', Object.keys(Browsers))
         .option('--environment <environment>', 'Environment [default: development]', Object.keys(Environments))
