@@ -1,11 +1,13 @@
 import Chalk from 'chalk';
+import ChildProcess from 'child_process';
 import Filter from 'lodash/filter';
 import ForEach from 'lodash/forEach';
 import IsNil from 'lodash/isNil';
 import IsPlainObject from 'lodash/isPlainObject';
-import IsString from 'lodash/isString';
 import Map from 'lodash/map';
 import {exec} from 'child_process';
+
+import {emitLines} from './helpers/stream';
 
 
 export function parseLines(lines) {
@@ -72,7 +74,13 @@ export function writeLines(log, lines, options = null) {
     });
 }
 
-function run(cmd, options) {
+export function run(path, cmd, options) {
+    options = {
+        cwd: path,
+
+        ...(options || {})
+    };
+
     return new Promise((resolve, reject) => {
         exec(`npm ${cmd}`, options, (err, stdout, stderr) => {
             let result = {
@@ -90,6 +98,60 @@ function run(cmd, options) {
             // Resolve promise
             resolve(result);
         });
+    });
+}
+
+export function spawn(cwd, args, options = null) {
+    options = {
+        logger: null,
+        prefix: null,
+
+        ...(options || {})
+    };
+
+    return new Promise((resolve, reject) => {
+        let proc = ChildProcess.spawn('npm', args, {
+            shell: true,
+            cwd
+        });
+
+        // Listen for "error" events
+        proc.on('error', (err) => {
+            reject(new Error(`Unable to start process: ${(err && err.message) ? err.message : err}`));
+        });
+
+        // Listen for "close" events
+        proc.on('close', (code) => {
+            if(code === 0) {
+                resolve();
+            } else {
+                reject(new Error(`Process exited with code: ${code}`));
+            }
+        });
+
+        // Ensure logger is enabled
+        if(IsNil(options.logger)) {
+            return;
+        }
+
+        // Configure streams to emit "line" events
+        emitLines(proc.stdout);
+        emitLines(proc.stderr);
+
+        // Write stdout lines to logger
+        proc.stdout.on('line', (line) =>
+            writeLines(options.logger, line, {
+                prefix: options.prefix
+            })
+        );
+
+        // Write stderr lines to logger
+        proc.stderr.on('line', (line) =>
+            writeLines(options.logger, line, {
+                defaultColour: 'cyan',
+                prefix: options.prefix
+            })
+        );
     });
 }
 
@@ -167,30 +229,6 @@ export function install(cwd, name, options) {
     });
 }
 
-export function link(pkgs, options) {
-    if(IsNil(pkgs)) {
-        return Promise.reject(new Error('Invalid value provided for the "name" parameter (expected array or string)'));
-    }
-
-    if(IsString(pkgs)) {
-        pkgs = [pkgs];
-    }
-
-    if(!Array.isArray(pkgs)) {
-        return Promise.reject(new Error('Invalid value provided for the "name" parameter (expected array or string)'));
-    }
-
-    if(pkgs.length < 1) {
-        return Promise.resolve();
-    }
-
-    return run(`link ${pkgs.join(' ')}`, options);
-}
-
-export function linkToGlobal(options) {
-    return run('link', options);
-}
-
 export function list(path, options) {
     let cmd = 'ls';
 
@@ -198,8 +236,7 @@ export function list(path, options) {
         cmd += ` ${encodeOptions(options)}`;
     }
 
-    return run(cmd, {
-        cwd: path,
+    return run(path, cmd, {
         maxBuffer: 1024 * 1024 // 1 MB
     });
 }
@@ -234,8 +271,8 @@ export default {
 
     dedupe,
     install,
-    link,
-    linkToGlobal,
     list,
-    pack
+    pack,
+    run,
+    spawn
 };
