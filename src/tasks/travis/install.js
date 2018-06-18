@@ -71,19 +71,19 @@ export function clone(target, branch, name) {
 
 function link(target, branch, module) {
     // Clone repository for module
-    return clone(target, branch, module).then(({branch, modulePath}) => {
+    return clone(target, branch, module).then(({branch, localPath}) => {
         Vorpal.logger.info(`[NeApp/${module}#${branch}] Installing dependencies...`);
 
         // Install dependencies
-        return Npm.install(modulePath).then(
+        return Npm.install(localPath).then(
             Npm.createHandler(Vorpal.logger, `[NeApp/${module}#${branch}]`)
         ).then(() => {
             let linkPath = `${target}/node_modules/${module}`;
 
-            Vorpal.logger.info(`[NeApp/${module}#${branch}] "${linkPath}" -> "${modulePath}"`);
+            Vorpal.logger.info(`[NeApp/${module}#${branch}] "${linkPath}" -> "${localPath}"`);
 
             // Create link
-            return Link.create(linkPath, modulePath, [
+            return Link.create(linkPath, localPath, [
                 `${target}/.modules/`,
                 `${target}/node_modules/`
             ]);
