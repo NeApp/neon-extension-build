@@ -57,16 +57,16 @@ function createLogger(prefix, name) {
     };
 }
 
-function getEnvironmentName(name) {
-    if(name === 'production') {
-        return Chalk.green(name);
+function getEnvironmentName(environment) {
+    if(environment.name === 'production') {
+        return Chalk.green(environment.title);
     }
 
-    return Chalk.yellow(name);
+    return Chalk.yellow(environment.title);
 }
 
 function createLoggerPrefix(browser, environment) {
-    return `[${getEnvironmentName(environment.name)}#${Chalk.cyan(PadEnd(browser.name, 7))}] `;
+    return `[${getEnvironmentName(environment)}#${Chalk.cyan(PadEnd(browser.title, 7))}] `;
 }
 
 export function createTask({name, required = [], optional = []}, handler = null) {

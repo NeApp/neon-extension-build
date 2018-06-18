@@ -8,10 +8,10 @@ import Environments from './constants/environments';
 
 function getBuildPath(environment, browser, options) {
     if(browser.local) {
-        return Path.join(options['build-dir'], environment.name);
+        return Path.join(options['build-dir'], environment.title);
     }
 
-    return Path.join(options['build-dir'], browser.name, environment.name);
+    return Path.join(options['build-dir'], browser.title, environment.title);
 }
 
 function resolveEnvironment(environment, browser, options) {

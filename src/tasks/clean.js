@@ -9,7 +9,7 @@ export const Clean = Task.create({
     name: 'clean',
     description: 'Clean the build environment.'
 }, function(log, browser, environment) {
-    let path = Path.join(environment.options['build-dir'], browser.name, environment.name);
+    let path = Path.join(environment.buildPath);
 
     if(!Filesystem.existsSync(path)) {
         log.info('Skipping - Path doesn\'t exist');

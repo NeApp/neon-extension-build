@@ -1,5 +1,6 @@
 const DevelopmentEnvironment = {
     name: 'development',
+    title: 'Development',
 
     webpack: {
         debug: true,
@@ -12,6 +13,7 @@ const DevelopmentEnvironment = {
 
 const ProductionEnvironment = {
     name: 'production',
+    title: 'Production',
 
     webpack: {
         debug: false,

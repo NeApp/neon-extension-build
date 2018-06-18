@@ -37,14 +37,14 @@ function createDescriptor(browser) {
 
         'files': [
             {
-                'includePattern': 'build/production/(.*\\.zip)',
+                'includePattern': 'Build/Production/(.*\\.zip)',
                 'uploadPattern': '$1',
                 'matrixParams': {
                     'override': 1
                 }
             },
             {
-                'includePattern': 'build/production/(MD5SUMS|webpack.*)',
+                'includePattern': 'Build/Production/(MD5SUMS|webpack.*)',
                 'uploadPattern': `Neon-${browser.title}-${browser.versionName}/$1`,
                 'matrixParams': {
                     'override': 1
