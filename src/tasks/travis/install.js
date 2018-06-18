@@ -215,17 +215,17 @@ function installModule(target, branch, modules) {
     return Npm.install(target).then(
         Npm.createHandler(Vorpal.logger)
     ).then(() => {
-        Vorpal.logger.info('Linking module dependencies...');
-
-        // Link module dependencies
-        return linkModuleDependencies(target, branch, modules);
-    }).then(() => {
         Vorpal.logger.info('Linking modules...');
 
         // Link modules
         return runSequential(modules, (name) =>
             link(target, branch, name)
         );
+    }).then(() => {
+        Vorpal.logger.info('Linking module dependencies...');
+
+        // Link module dependencies
+        return linkModuleDependencies(target, branch, modules);
     });
 }
 
