@@ -61,8 +61,8 @@
     "lint": "eslint src/",
     "prepublish": "npm run build",
     "start": "babel-node -- src/index.js",
-    "test": "npm run jasmine && npm run lint",
-    "test:develop": "npm run build && npm run coverage:jasmine && npm run lint"
+    "test": "npm run jasmine",
+    "test:develop": "npm run build && npm run coverage:jasmine"
   },
   "nyc": {
     "exclude": [
