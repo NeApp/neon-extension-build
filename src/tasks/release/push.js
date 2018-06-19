@@ -13,6 +13,11 @@ import {getPackages} from './core/helpers';
 import {runSequential} from '../../core/helpers/promise';
 
 
+const Remotes = [
+    'bitbucket/neapp',
+    'neapp'
+];
+
 const travis = new Travis({
     version: '2.0.0'
 });
@@ -256,9 +261,9 @@ function pushRelease(log, browser, remotes) {
     if(IsString(remotes)) {
         remotes = [remotes];
     } else if(IsNil(remotes)) {
-        remotes = ['bitbucket/neapp', 'neapp'];
-    } else {
-        return Promise.reject(`Invalid remote: ${remotes}`);
+        remotes = Remotes;
+    } else if(!Array.isArray(remotes)) {
+        return Promise.reject(`Invalid remotes: ${remotes}`);
     }
 
     let repository = SimpleGit(browser.extension.path).silent(true);
@@ -328,8 +333,12 @@ function pushRelease(log, browser, remotes) {
 }
 
 export const PushRelease = Task.create({
-    name: 'release:push [remote]',
-    description: 'Push release to remote(s).'
+    name: 'release:push',
+    description: 'Push release to remote(s).',
+
+    command: (cmd) => (
+        cmd.option('--remote <remote>', 'Remote [default: all]', Remotes)
+    )
 }, (log, browser, environment, {remote}) => {
     return pushRelease(log, browser, remote);
 }, {
