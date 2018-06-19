@@ -22,17 +22,29 @@ const travis = new Travis({
     version: '2.0.0'
 });
 
-function getTargetBranches(tag) {
-    return [
-        // Development
-        'develop',
+export function getTargetBranches(tag) {
+    let major = SemanticVersion.major(tag);
+    let minor = SemanticVersion.minor(tag);
+    let patch = SemanticVersion.patch(tag);
+    let prerelease = SemanticVersion.prerelease(tag);
 
-        // Version
-        /v\d+\.\d+/.exec(tag)[0],
+    // Build target branches
+    let branches = [];
 
-        // Pre-release
-        'master'
-    ];
+    // - Develop
+    if(patch === 0) {
+        branches.push('develop');
+    }
+
+    // - Release
+    branches.push(`v${major}.${minor}`);
+
+    // - Master
+    if(IsNil(prerelease)) {
+        branches.push('master');
+    }
+
+    return branches;
 }
 
 function getTravisStatus(log, module, ref, options) {
