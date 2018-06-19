@@ -31,7 +31,10 @@ describe('Tasks', () => {
                         }
                     }
                 })).toEqual({
-                    'neon-extension-framework': 'NeApp/neon-extension-framework#abc123'
+                    'neon-extension-framework': {
+                        from: 'neon-extension-framework@NeApp/neon-extension-framework#abc123',
+                        version: 'NeApp/neon-extension-framework#abc123'
+                    }
                 });
             });
         });

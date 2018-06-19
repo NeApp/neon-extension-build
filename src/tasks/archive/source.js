@@ -32,7 +32,10 @@ export function getModuleVersions(browser) {
         }
 
         // Commit
-        return `NeApp/${module.name}#${module.repository.commit}`;
+        return {
+            version: `NeApp/${module.name}#${module.repository.commit}`,
+            from: `${module.name}@NeApp/${module.name}#${module.repository.commit}`
+        };
     });
 }
 

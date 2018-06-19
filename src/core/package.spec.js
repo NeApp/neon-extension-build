@@ -14,14 +14,18 @@ describe('Package', () => {
                     'neon-extension-destination-librefm': '1.9.0'
                 }
             }, {
-                'neon-extension-framework': '2.0.0',
+                'neon-extension-framework': {
+                    from: 'neon-extension-framework@NeApp/neon-extension-framework#alpha',
+                    version: 'NeApp/neon-extension-framework#alpha'
+                },
+
                 'neon-extension-destination-lastfm': '2.0.0'
             })).toEqual({
                 name: 'neon-extension-chrome',
 
                 dependencies: {
                     'neon-extension-core': '1.9.0',
-                    'neon-extension-framework': '2.0.0',
+                    'neon-extension-framework': 'NeApp/neon-extension-framework#alpha',
                     'neon-extension-destination-lastfm': '2.0.0',
                     'neon-extension-destination-librefm': '1.9.0'
                 }
@@ -102,7 +106,7 @@ describe('Package', () => {
             });
         });
 
-        it('should update dependencies', () => {
+        it('should update package "version"', () => {
             expect(updatePackageLocks({
                 name: 'neon-extension-chrome',
 
@@ -132,6 +136,54 @@ describe('Package', () => {
                     },
                     'neon-extension-framework': {
                         version: '2.0.0'
+                    },
+                    'neon-extension-destination-lastfm': {
+                        version: '2.0.0'
+                    },
+                    'neon-extension-destination-librefm': {
+                        version: '1.9.0'
+                    }
+                }
+            });
+        });
+
+        it('should update package "from"', () => {
+            expect(updatePackageLocks({
+                name: 'neon-extension-chrome',
+
+                dependencies: {
+                    'neon-extension-core': {
+                        version: '1.9.0'
+                    },
+                    'neon-extension-framework': {
+                        from: 'neon-extension-framework@NeApp/neon-extension-framework#alpha',
+                        version: 'NeApp/neon-extension-framework#alpha'
+                    },
+                    'neon-extension-destination-lastfm': {
+                        from: 'neon-extension-destination-lastfm@NeApp/neon-extension-destination-lastfm#alpha',
+                        version: 'NeApp/neon-extension-destination-lastfm#alpha'
+                    },
+                    'neon-extension-destination-librefm': {
+                        version: '1.9.0'
+                    }
+                }
+            }, {
+                'neon-extension-framework': {
+                    from: 'neon-extension-framework@NeApp/neon-extension-framework#beta',
+                    version: 'NeApp/neon-extension-framework#beta'
+                },
+
+                'neon-extension-destination-lastfm': '2.0.0'
+            })).toEqual({
+                name: 'neon-extension-chrome',
+
+                dependencies: {
+                    'neon-extension-core': {
+                        version: '1.9.0'
+                    },
+                    'neon-extension-framework': {
+                        from: 'neon-extension-framework@NeApp/neon-extension-framework#beta',
+                        version: 'NeApp/neon-extension-framework#beta'
                     },
                     'neon-extension-destination-lastfm': {
                         version: '2.0.0'

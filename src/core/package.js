@@ -205,6 +205,19 @@ export function readPackageDetails(path) {
     });
 }
 
+export function parsePackageDependency(dep) {
+    if(!IsPlainObject(dep)) {
+        dep = { version: dep };
+    }
+
+    return {
+        from: null,
+        version: null,
+
+        ...(dep || {})
+    };
+}
+
 export function updatePackage(pkg, versions) {
     function updateVersions(dependencies) {
         if(IsNil(dependencies)) {
@@ -214,9 +227,18 @@ export function updatePackage(pkg, versions) {
         return {
             ...dependencies,
 
-            ...PickBy(versions, (_, name) =>
+            // Update package versions
+            ...MapValues(PickBy(versions, (_, name) =>
                 !IsNil(dependencies[name])
-            )
+            ), (dep) => {
+                let { version } = parsePackageDependency(dep);
+
+                if(IsNil(version)) {
+                    throw new Error(`Invalid version defined for "${name}": ${version}`);
+                }
+
+                return version;
+            })
         };
     }
 
@@ -264,7 +286,21 @@ export function updatePackageLocks(locks, versions = null) {
             ), (dependency, name) => {
                 // Update version (if provided)
                 if(!IsNil(versions[name])) {
-                    dependency.version = versions[name];
+                    let { from, version } = parsePackageDependency(versions[name]);
+
+                    // Update package "version"
+                    if(IsNil(version)) {
+                        throw new Error(`Invalid version defined for "${name}": ${version}`);
+                    }
+
+                    dependency.version = version;
+
+                    // Update package "from"
+                    if(!IsNil(from)) {
+                        dependency.from = from;
+                    } else if(!IsNil(dependency.from)) {
+                        delete dependency.from;
+                    }
                 }
 
                 // Ensure "integrity" field hasn't been defined
