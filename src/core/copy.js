@@ -8,7 +8,9 @@ import Path from 'path';
 const TextExtensions = [
     '.css',
     '.html',
-    '.js'
+    '.js',
+    '.json',
+    '.svg'
 ];
 
 export function copyFile(src, dest) {
