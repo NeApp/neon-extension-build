@@ -234,9 +234,7 @@ export function resolve(extension, path, type, name) {
             }
 
             // Resolve repository status
-            return Git.status(path, {
-                debug: true
-            }).catch(() => ({
+            return Git.status(path).catch(() => ({
                 ahead: 0,
                 dirty: false,
 
