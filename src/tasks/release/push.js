@@ -354,9 +354,9 @@ function pushRelease(log, browser, remotes, options) {
                     repository
                 }));
             }, () => {
-                log.warn(`[${module.name}] ` + Chalk.yellow(
+                log.warn(`[${module.name}] ${Chalk.yellow(
                     'No release available to push'
-                ));
+                )}`);
             });
         }).then((modules) =>
             Promise.resolve()
