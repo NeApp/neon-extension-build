@@ -115,7 +115,7 @@ function getTravisStatus(log, module, ref, options) {
 
 function awaitTravisBuild(log, module, ref, id, options) {
     options = {
-        retryAttempts: 40,
+        retryAttempts: 120,
         retryInterval: 15 * 1000,
 
         ...(options || {})
