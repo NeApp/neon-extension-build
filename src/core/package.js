@@ -1,4 +1,6 @@
+import CloneDeep from 'lodash/cloneDeep';
 import Filesystem from 'fs-extra';
+import IsEqual from 'lodash/isEqual';
 import IsNil from 'lodash/isNil';
 import IsPlainObject from 'lodash/isPlainObject';
 import MapValues from 'lodash/mapValues';
@@ -218,8 +220,18 @@ export function parsePackageDependency(dep) {
     };
 }
 
-export function updatePackage(pkg, versions) {
-    function updateVersions(dependencies) {
+export function updatePackage(pkg, versions = null, options = null) {
+    versions = versions || {};
+
+    options = {
+        formatVersion: (version) => version,
+
+        ...(options || {})
+    };
+
+    function updateVersions(pkg, group) {
+        let dependencies = pkg[group];
+
         if(IsNil(dependencies)) {
             return dependencies;
         }
@@ -230,48 +242,63 @@ export function updatePackage(pkg, versions) {
             // Update package versions
             ...MapValues(PickBy(versions, (_, name) =>
                 !IsNil(dependencies[name])
-            ), (dep) => {
+            ), (dep, name) => {
                 let { version } = parsePackageDependency(dep);
 
                 if(IsNil(version)) {
                     throw new Error(`Invalid version defined for "${name}": ${version}`);
                 }
 
-                return version;
+                return options.formatVersion(version, name, group);
             })
         };
     }
 
-    if(!IsNil(pkg.dependencies)) {
-        pkg.dependencies = updateVersions(pkg.dependencies);
+    if(!IsNil(pkg.dependencies) && Object.keys(pkg.dependencies).length > 0) {
+        pkg.dependencies = updateVersions(pkg, 'dependencies');
     }
 
-    if(!IsNil(pkg.peerDependencies)) {
-        pkg.peerDependencies = updateVersions(pkg.peerDependencies);
+    if(!IsNil(pkg.peerDependencies) && Object.keys(pkg.peerDependencies).length > 0) {
+        pkg.peerDependencies = updateVersions(pkg, 'peerDependencies');
     }
 
     return pkg;
 }
 
-export function writePackage(path, versions) {
+export function writePackage(path, versions = null, options = null) {
     if(Filesystem.statSync(path).isDirectory()) {
         path = Path.join(path, 'package.json');
     }
 
     // Read package details
     return Filesystem.readFile(path).then((data) => {
-        let pkg = JSON.parse(data);
+        let previous = JSON.parse(data);
+
+        // Update package versions
+        let current = updatePackage(CloneDeep(previous), versions, options);
+
+        if(IsEqual(previous, current)) {
+            return Promise.resolve(false);
+        }
 
         // Write package details
-        return Filesystem.writeJson(path, updatePackage(pkg, versions), {
+        return Filesystem.writeJson(path, current, {
             EOL: data.indexOf('\r\n') >= 0 ? '\r\n' : '\n',
             spaces: 2
-        });
+        }).then(() =>
+            true
+        );
     });
 }
 
-export function updatePackageLocks(locks, versions = null) {
+export function updatePackageLocks(locks, versions = null, options = null) {
     versions = versions || {};
+
+    options = {
+        formatVersion: (version) => version,
+
+        ...(options || {})
+    };
 
     // Update package locks
     return {
@@ -293,7 +320,7 @@ export function updatePackageLocks(locks, versions = null) {
                         throw new Error(`Invalid version defined for "${name}": ${version}`);
                     }
 
-                    dependency.version = version;
+                    dependency.version = options.formatVersion(version, name);
 
                     // Update package "from"
                     if(!IsNil(from)) {
@@ -314,20 +341,29 @@ export function updatePackageLocks(locks, versions = null) {
     };
 }
 
-export function writePackageLocks(path, versions) {
+export function writePackageLocks(path, versions = null, options = null) {
     if(Filesystem.statSync(path).isDirectory()) {
         path = Path.join(path, 'package-lock.json');
     }
 
     // Read package locks
     return Filesystem.readFile(path).then((data) => {
-        let locks = JSON.parse(data);
+        let previous = JSON.parse(data);
+
+        // Update package locks
+        let current = updatePackageLocks(CloneDeep(previous), versions, options);
+
+        if(IsEqual(previous, current)) {
+            return Promise.resolve(false);
+        }
 
         // Write package locks
-        return Filesystem.writeJson(path, updatePackageLocks(locks, versions), {
+        return Filesystem.writeJson(path, current, {
             EOL: data.indexOf('\r\n') >= 0 ? '\r\n' : '\n',
             spaces: 2
-        });
+        }).then(() =>
+            true
+        );
     });
 }
 

@@ -1,9 +1,9 @@
 import Chalk from 'chalk';
 import CloneDeep from 'lodash/cloneDeep';
 import Filesystem from 'fs-extra';
+import IsEqual from 'lodash/isEqual';
 import IsNil from 'lodash/isNil';
 import Map from 'lodash/map';
-import MapValues from 'lodash/mapValues';
 import OmitBy from 'lodash/omitBy';
 import Path from 'path';
 import SemanticVersion from 'semver';
@@ -13,6 +13,7 @@ import Git from '../../core/git';
 import {Task} from '../../core/helpers';
 import {getPackages} from './core/helpers';
 import {runSequential} from '../../core/helpers/promise';
+import {updatePackage, writePackageLocks} from '../../core/package';
 import {writeContributors} from '../contributors';
 
 
@@ -123,68 +124,6 @@ function updateContributors(log, browser, options) {
     });
 }
 
-function updatePackageDependenciesGroup(group, versions, pkg) {
-    if(IsNil(pkg[group])) {
-        return false;
-    }
-
-    // Remove empty dependencies
-    if(Object.keys(pkg[group]).length < 1) {
-        delete pkg[group];
-        return false;
-    }
-
-    // Update dependencies
-    let changed = false;
-
-    pkg[group] = MapValues(pkg[group], (version, name) => {
-        if(name.indexOf('neon-extension-') < 0) {
-            return version;
-        }
-
-        if(IsNil(versions[name])) {
-            throw new Error(`Unknown dependency: ${name}`);
-        }
-
-        // Retrieve current version
-        let current = versions[name];
-
-        if(group === 'peerDependencies') {
-            let satisfied = SemanticVersion.satisfies(versions[name], current);
-
-            current = `^${versions[name]}`;
-
-            if(satisfied) {
-                return current;
-            }
-        }
-
-        // Ensure version has changed
-        if(current === version) {
-            return current;
-        }
-
-        // Mark dependency group as changed
-        changed = true;
-
-        // Update version
-        return current;
-    });
-
-    return changed;
-}
-
-function updatePackageDependencies(versions, pkg) {
-    let changed = false;
-
-    // Update each dependency group
-    ['dependencies', 'devDependencies', 'peerDependencies'].forEach((group) => {
-        changed = updatePackageDependenciesGroup(group, versions, pkg) || changed;
-    });
-
-    return changed;
-}
-
 function updatePackages(log, browser, version, options) {
     let versions = {};
 
@@ -225,57 +164,70 @@ function updatePackages(log, browser, version, options) {
             ));
         }
 
-        // Update dependencies
-        let dependenciesChanged = updatePackageDependencies(versions, pkg);
+        function formatVersion(version, name) {
+            if(module.type === 'package') {
+                return `file:${name}-${version}.tgz`;
+            }
 
-        if(dependenciesChanged) {
-            log.debug(`[${module.name}] Dependencies changed`);
+            return version;
         }
 
-        // Only create patch releases on modules with changes
-        if(dependenciesChanged || module.repository.ahead > 0 || !isPatchRelease(pkg.version, version)) {
-            // Ensure version has been incremented
-            if(SemanticVersion.lte(version, pkg.version)) {
-                if(!options.force) {
-                    return Promise.reject(Chalk.red(
-                        `Unable to create release, target version (${version}) should be later than the current ` +
-                        `${module.name} version: ${pkg.version}`
+        // Update package locks
+        return writePackageLocks(module.path, versions, { formatVersion }).then((dependenciesChanged) => {
+            // Update package dependencies
+            dependenciesChanged = !IsEqual(CloneDeep(pkg), updatePackage(pkg, versions, {
+                formatVersion
+            })) || dependenciesChanged;
+
+            if(dependenciesChanged) {
+                log.debug(`[${module.name}] Dependencies changed`);
+            }
+
+            // Only create patch releases on modules with changes
+            if(dependenciesChanged || module.repository.ahead > 0 || !isPatchRelease(pkg.version, version)) {
+                // Ensure version has been incremented
+                if(SemanticVersion.lte(version, pkg.version)) {
+                    if(!options.force) {
+                        return Promise.reject(Chalk.red(
+                            `Unable to create release, target version (${version}) should be later than the current ` +
+                            `${module.name} version: ${pkg.version}`
+                        ));
+                    }
+
+                    // Display warning
+                    log.warn(Chalk.yellow(
+                        `[${module.name}] Target version (${version}) should be later than the ` +
+                        `current version: ${pkg.version}`
                     ));
                 }
 
-                // Display warning
-                log.warn(Chalk.yellow(
-                    `[${module.name}] Target version (${version}) should be later than the ` +
-                    `current version: ${pkg.version}`
-                ));
+                log.info(Chalk.green(`[${module.name}] Version changed to: ${version}`));
+
+                // Update version
+                pkg.version = version;
+
+                // Store module version
+                versions[module.name] = version;
+            } else {
+                log.debug(`[${module.name}] Version: ${pkg.version}`);
+
+                // Store module version
+                versions[module.name] = pkg.version;
+
+                return Promise.resolve();
             }
 
-            log.info(Chalk.green(`[${module.name}] Version changed to: ${version}`));
+            // Read package metadata from file (to determine the current EOL character)
+            let path = Path.join(module.path, 'package.json');
 
-            // Update version
-            pkg.version = version;
-
-            // Store module version
-            versions[module.name] = version;
-        } else {
-            log.debug(`[${module.name}] Version: ${pkg.version}`);
-
-            // Store module version
-            versions[module.name] = pkg.version;
-
-            return Promise.resolve();
-        }
-
-        // Read package metadata from file (to determine the current EOL character)
-        let path = Path.join(module.path, 'package.json');
-
-        return Filesystem.readFile(path).then((data) =>
-            // Write package metadata to file
-            Filesystem.writeJson(path, OmitBy(pkg, IsNil), {
-                EOL: data.indexOf('\r\n') >= 0 ? '\r\n' : '\n',
-                spaces: 2
-            })
-        );
+            return Filesystem.readFile(path).then((data) =>
+                // Write package metadata to file
+                Filesystem.writeJson(path, OmitBy(pkg, IsNil), {
+                    EOL: data.indexOf('\r\n') >= 0 ? '\r\n' : '\n',
+                    spaces: 2
+                })
+            );
+        });
     });
 }
 
