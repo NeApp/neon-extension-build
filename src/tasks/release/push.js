@@ -331,6 +331,13 @@ function pushRelease(log, browser, remotes, options) {
             ));
         }
 
+        // Resolve promise with package `tag`
+        return tag;
+    }, () => {
+        return Promise.reject(new Error(
+            'No release available to push'
+        ));
+    }).then((tag) => {
         // Resolve modules that match the package `tag`
         return runSequential(modules, (module) => {
             let repository = SimpleGit(module.path).silent(true);
@@ -406,10 +413,6 @@ function pushRelease(log, browser, remotes, options) {
             // Update package release
             return updatePackageRelease(log, browser.extension, packageRepository, modules, tag, { dryRun });
         });
-    }, () => {
-        return Promise.reject(new Error(
-            'No release available to push'
-        ));
     });
 }
 
