@@ -304,6 +304,10 @@ export function updatePackageLocks(locks, versions = null, options = null) {
     return {
         ...locks,
 
+        // Update package version
+        version: versions[locks.name] || locks.version,
+
+        // Update dependencies
         dependencies: {
             ...locks.dependencies,
 

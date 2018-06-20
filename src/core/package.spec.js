@@ -70,6 +70,7 @@ describe('Package', () => {
         it('should remove "integrity" fields', () => {
             expect(updatePackageLocks({
                 name: 'neon-extension-chrome',
+                version: '1.9.0',
 
                 dependencies: {
                     'neon-extension-core': {
@@ -88,6 +89,7 @@ describe('Package', () => {
                 }
             })).toEqual({
                 name: 'neon-extension-chrome',
+                version: '1.9.0',
 
                 dependencies: {
                     'neon-extension-core': {
@@ -109,6 +111,7 @@ describe('Package', () => {
         it('should update package "version"', () => {
             expect(updatePackageLocks({
                 name: 'neon-extension-chrome',
+                version: '1.9.0',
 
                 dependencies: {
                     'neon-extension-core': {
@@ -129,6 +132,7 @@ describe('Package', () => {
                 'neon-extension-destination-lastfm': '2.0.0'
             })).toEqual({
                 name: 'neon-extension-chrome',
+                version: '1.9.0',
 
                 dependencies: {
                     'neon-extension-core': {
@@ -150,6 +154,7 @@ describe('Package', () => {
         it('should update package "from"', () => {
             expect(updatePackageLocks({
                 name: 'neon-extension-chrome',
+                version: '1.9.0',
 
                 dependencies: {
                     'neon-extension-core': {
@@ -176,6 +181,7 @@ describe('Package', () => {
                 'neon-extension-destination-lastfm': '2.0.0'
             })).toEqual({
                 name: 'neon-extension-chrome',
+                version: '1.9.0',
 
                 dependencies: {
                     'neon-extension-core': {

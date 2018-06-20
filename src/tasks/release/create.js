@@ -3,6 +3,7 @@ import CloneDeep from 'lodash/cloneDeep';
 import Filesystem from 'fs-extra';
 import IsEqual from 'lodash/isEqual';
 import IsNil from 'lodash/isNil';
+import IsPlainObject from 'lodash/isPlainObject';
 import Map from 'lodash/map';
 import OmitBy from 'lodash/omitBy';
 import Path from 'path';
@@ -34,15 +35,27 @@ function isPatchRelease(current, next) {
 }
 
 function createReleases(log, browser, version, options) {
-    log.debug('Creating releases...');
+    if(options.commit) {
+        log.debug('Creating releases...');
+    } else {
+        log.info('Creating releases... (skipped)');
+        return Promise.resolve();
+    }
 
     // Create releases for each module with changes
     return runSequential(getPackages(browser), (module) => {
         let repository = SimpleGit(module.path).silent(true);
 
         return repository.status().then((status) => {
-            if(status.files.length < 1 && !options.force) {
-                return Promise.resolve();
+            if(status.files.length < 1) {
+                if(!options.force) {
+                    return Promise.resolve();
+                }
+
+                // Display warning
+                log.warn(Chalk.yellow(
+                    `[${module.name}] Repository has no changes`
+                ));
             }
 
             // Create release
@@ -112,8 +125,15 @@ function updateContributors(log, browser, options) {
     return runSequential(getPackages(browser), (module) => {
         // Retrieve module repository status
         return Git.status(module.path).then((repository) => {
-            if(!repository.dirty && !options.force) {
-                return Promise.resolve();
+            if(!repository.dirty) {
+                if(!options.force) {
+                    return Promise.resolve();
+                }
+
+                // Display warning
+                log.warn(Chalk.yellow(
+                    `[${module.name}] Repository has no changes`
+                ));
             }
 
             // Update module contributors
@@ -172,7 +192,7 @@ function updatePackages(log, browser, version, options) {
             return version;
         }
 
-        // Update package locks
+        // Update module versions in [package-lock.json]
         return writePackageLocks(module.path, versions, { formatVersion }).then((dependenciesChanged) => {
             // Update package dependencies
             dependenciesChanged = !IsEqual(CloneDeep(pkg), updatePackage(pkg, versions, {
@@ -214,19 +234,37 @@ function updatePackages(log, browser, version, options) {
                 // Store module version
                 versions[module.name] = pkg.version;
 
-                return Promise.resolve();
+                // No changes
+                if(!options.force) {
+                    return Promise.resolve();
+                }
             }
 
-            // Read package metadata from file (to determine the current EOL character)
-            let path = Path.join(module.path, 'package.json');
+            // Write package version to [package-lock.json]
+            return writePackageLocks(module.path, {
+                [module.name]: pkg.version
+            }).then(() => {
+                // Read package metadata from file (to determine the current EOL character)
+                let path = Path.join(module.path, 'package.json');
 
-            return Filesystem.readFile(path).then((data) =>
-                // Write package metadata to file
-                Filesystem.writeJson(path, OmitBy(pkg, IsNil), {
-                    EOL: data.indexOf('\r\n') >= 0 ? '\r\n' : '\n',
-                    spaces: 2
-                })
-            );
+                return Filesystem.readFile(path).then((data) =>
+                    // Write package metadata to file
+                    Filesystem.writeJson(path, OmitBy(pkg, (value) => {
+                        if(IsNil(value)) {
+                            return true;
+                        }
+
+                        if(IsPlainObject(value) && Object.keys(value).length < 1) {
+                            return true;
+                        }
+
+                        return false;
+                    }), {
+                        EOL: data.indexOf('\r\n') >= 0 ? '\r\n' : '\n',
+                        spaces: 2
+                    })
+                );
+            });
         });
     });
 }
@@ -235,8 +273,9 @@ export const CreateRelease = Task.create({
     name: 'release:create <version>',
     description: 'Create release.',
 
-    command: (cmd) => (
-        cmd.option('--force', 'Create release (ignoring all violations).')
+    command: (cmd) => (cmd
+        .option('--force', 'Create release (ignoring all violations).')
+        .option('--no-commit', 'Do not commit changes')
     )
 }, (log, browser, environment, {version, ...options}) => {
     // Ensure the provided `version` is valid
