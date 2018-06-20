@@ -143,7 +143,7 @@ export function updatePackageRelease(log, extension, repository, modules, tag, o
 
     // Resolve immediately for dry runs
     if(options.dryRun) {
-        log.info(`Updating package release "${tag}" on "NeApp/${module.name}" (skipped, dry run)`);
+        log.info(`Updating package release "${tag}" on "NeApp/${extension.name}" (skipped, dry run)`);
         return Promise.resolve();
     }
 
