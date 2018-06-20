@@ -2,6 +2,7 @@ import Chalk from 'chalk';
 import Find from 'lodash/find';
 import IsNil from 'lodash/isNil';
 import IsString from 'lodash/isString';
+import Map from 'lodash/map';
 import SemanticVersion from 'semver';
 import SimpleGit from 'simple-git/promise';
 import Travis from 'travis-ci';
@@ -171,6 +172,18 @@ function awaitTravisBuild(log, module, ref, id, options) {
 }
 
 function awaitBuild(log, module, ref, options) {
+    options = {
+        dryRun: false,
+
+        ...(options || {})
+    };
+
+    // Resolve immediately for dry runs
+    if(options.dryRun) {
+        log.info(`Waiting for "${ref}" on "NeApp/${module.name}" to finish building (skipped, dry run)`);
+        return Promise.resolve('success');
+    }
+
     // Retrieve travis status for `ref`
     return getTravisStatus(log, module, ref, options).then((status) => {
         let parameters = /https:\/\/travis-ci\.org\/.*?\/.*?\/builds\/(\d+)/.exec(status['target_url']);
@@ -187,60 +200,79 @@ function awaitBuild(log, module, ref, options) {
     });
 }
 
-function pushBranches(log, module, repository, remotes, commit, tag) {
-    let branches = getTargetBranches(tag);
+function pushBranch(log, module, remotes, tag, branch, options) {
+    options = {
+        dryRun: false,
 
-    // Push each branch to remote(s), and await build to complete
-    return runSequential(branches, (branch) => {
-        let startedAt = null;
+        ...(options || {})
+    };
 
-        return runSequential(remotes, (remote) => {
-            // Retrieve current remote commit (from local)
-            return repository.revparse(`${remote}/${branch}`).catch(() => null).then((currentCommit) => {
-                if(!IsNil(currentCommit) && currentCommit.trim() === commit) {
-                    log.debug(`[${module.name}] ${tag} has already been pushed to "${branch}" on "${remote}"`);
-                    return Promise.resolve();
-                }
+    let startedAt = null;
 
-                log.debug(`[${module.name}] Pushing ${tag} to "${branch}" on "${remote}"`);
-
-                if(remote === 'neapp') {
-                    startedAt = Date.now();
-                }
-
-                // Push branch to remote
-                return repository.push(remote, `+${tag}~0:refs/heads/${branch}`);
-            });
-        }).then(() => {
-            if(IsNil(startedAt) || remotes.indexOf('neapp') < 0) {
+    return runSequential(remotes, (remote) => {
+        // Retrieve current remote commit (from local)
+        return module.repository.revparse(`${remote}/${branch}`).catch(() => null).then((currentCommit) => {
+            if(!IsNil(currentCommit) && currentCommit.trim() === module.commit) {
+                log.debug(`[${module.name}] ${tag} has already been pushed to "${branch}" on "${remote}"`);
                 return Promise.resolve();
             }
 
-            // Wait for build to complete
-            return awaitBuild(log, module, branch, {
-                sha: commit,
-                createdAfter: startedAt
-            }).then((state) => {
-                if(state === 'failure') {
-                    return Promise.reject(new Error(
-                        `Build failed for ${module.name}#${branch}`
-                    ));
-                }
+            if(remote === 'neapp') {
+                startedAt = Date.now();
+            }
 
-                // Build successful
+            // Ignore push for dry runs
+            if(!options.dryRun) {
+                log.debug(`[${module.name}] Pushing ${tag} to "${branch}" on "${remote}"`);
+            } else {
+                log.debug(`[${module.name}] Pushing ${tag} to "${branch}" on "${remote}" (skipped, dry run)`);
                 return Promise.resolve();
-            });
+            }
+
+            // Push branch to remote
+            return module.repository.push(remote, `+${tag}~0:refs/heads/${branch}`);
+        });
+    }).then(() => {
+        if(IsNil(startedAt) || remotes.indexOf('neapp') < 0) {
+            return Promise.resolve();
+        }
+
+        // Wait for build to complete
+        return awaitBuild(log, module, branch, {
+            dryRun: options.dryRun,
+            sha: module.commit,
+            createdAfter: startedAt
+        }).then((state) => {
+            if(state === 'failure') {
+                return Promise.reject(new Error(
+                    `Build failed for ${module.name}#${branch}`
+                ));
+            }
+
+            // Build successful
+            return Promise.resolve();
         });
     });
 }
 
-function pushTag(log, module, repository, remotes, commit, tag) {
+function pushTag(log, module, remotes, tag, options) {
+    options = {
+        dryRun: false,
+
+        ...(options || {})
+    };
+
     // Push tag to remote
     return runSequential(remotes, (remote) => {
-        log.debug(`[${module.name}] Pushing ${tag} tag to "${remote}"`);
+        if(!options.dryRun) {
+            log.debug(`[${module.name}] Pushing ${tag} tag to "${remote}"`);
+        } else {
+            log.debug(`[${module.name}] Pushing ${tag} tag to "${remote}" (skipped, dry run)`);
+            return Promise.resolve();
+        }
 
         // Push tag to remote
-        return repository.push(remote, `refs/tags/${tag}`);
+        return module.repository.push(remote, `refs/tags/${tag}`);
     }).then(() => {
         if(remotes.indexOf('neapp') < 0) {
             return Promise.resolve();
@@ -248,7 +280,8 @@ function pushTag(log, module, repository, remotes, commit, tag) {
 
         // Wait for build to complete
         return awaitBuild(log, module, tag, {
-            sha: commit,
+            dryRun: options.dryRun,
+            sha: module.commit,
 
             // Wait 15s before the first status request (hopefully enough time for the status to be updated)
             delay: 15 * 1000
@@ -261,7 +294,9 @@ function pushTag(log, module, repository, remotes, commit, tag) {
 
             // Create release on GitHub
             if(module.type !== 'package') {
-                return createRelease(log, module, repository, tag);
+                return createRelease(log, module, module.repository, tag, {
+                    dryRun: options.dryRun
+                });
             }
 
             return Promise.resolve();
@@ -269,7 +304,9 @@ function pushTag(log, module, repository, remotes, commit, tag) {
     });
 }
 
-function pushRelease(log, browser, remotes) {
+function pushRelease(log, browser, remotes, options) {
+    let dryRun = options['dry-run'] || false;
+
     if(IsString(remotes)) {
         remotes = [remotes];
     } else if(IsNil(remotes)) {
@@ -278,13 +315,13 @@ function pushRelease(log, browser, remotes) {
         return Promise.reject(`Invalid remotes: ${remotes}`);
     }
 
-    let repository = SimpleGit(browser.extension.path).silent(true);
+    let packageRepository = SimpleGit(browser.extension.path).silent(true);
 
     let modules = getPackages(browser);
     let pushed = {};
 
     // Retrieve current version
-    return repository.raw(['describe', '--abbrev=0', '--match=v*', '--tags', '--exact-match']).then((tag) => {
+    return packageRepository.raw(['describe', '--abbrev=0', '--match=v*', '--tags', '--exact-match']).then((tag) => {
         tag = tag.trim();
 
         // Validate version
@@ -294,53 +331,85 @@ function pushRelease(log, browser, remotes) {
             ));
         }
 
-        // Push release for each module
+        // Resolve modules that match the package `tag`
         return runSequential(modules, (module) => {
-            let moduleRepository = SimpleGit(module.path).silent(true);
+            let repository = SimpleGit(module.path).silent(true);
 
             // Retrieve current version
-            return moduleRepository.raw([
+            return repository.raw([
                 'describe', '--abbrev=0', '--match=v*', '--tags', '--exact-match'
             ]).then((moduleTag) => {
                 moduleTag = moduleTag.trim();
 
-                // Ignore modules with no release matching the `tag`
+                // Ignore modules with no release matching the package `tag`
                 if(moduleTag !== tag) {
                     return Promise.resolve();
                 }
 
                 // Resolve version commit sha
-                return moduleRepository.revparse(`${tag}~0`).then((commit) => {
-                    commit = commit.trim();
+                return repository.revparse(`${tag}~0`).then((commit) => ({
+                    name: module.name,
 
-                    log.debug(`[${module.name}] Pushing ${tag} (${commit}) to remotes: ${remotes.join(', ')}`);
-
-                    // Push release to remote(s)
-                    return Promise.resolve()
-                    // Push branches to remote(s)
-                        .then(() => pushBranches(log, module, moduleRepository, remotes, commit, tag))
-                        // Push tag to remote(s)
-                        .then(() => pushTag(log, module, moduleRepository, remotes, commit, tag))
-                        // Log result
-                        .then(() => {
-                            log.info(Chalk.green(`[${module.name}] Pushed ${tag} to: ${remotes.join(', ')}`));
-
-                            // Mark module as pushed
-                            pushed[module.name] = true;
-                        });
-                });
+                    commit: commit.trim(),
+                    repository
+                }));
             }, () => {
-                log.debug(`[${module.name}] No release available to push`);
+                log.warn(`[${module.name}] ` + Chalk.yellow(
+                    'No release available to push'
+                ));
             });
-        }).then(() => {
+        }).then((modules) =>
+            Promise.resolve()
+                // Push branches to remote(s)
+                .then(() => runSequential(getTargetBranches(tag), (branch) => Promise.all(Map(modules, (module) => {
+                    log.info(
+                        `[${module.name}] ${Chalk.cyan(
+                            `Pushing ${tag} (${module.commit}) -> ${branch} (remotes: ${remotes.join(', ')})`
+                        )}`
+                    );
+
+                    // Push branch for module to remote(s)
+                    return pushBranch(log, module, remotes, tag, branch, { dryRun }).then(() => {
+                        log.info(
+                            `[${module.name}] ${Chalk.green(
+                                `Pushed ${tag} (${module.commit}) -> ${branch} (remotes: ${remotes.join(', ')})`
+                            )}`
+                        );
+                    });
+                }))))
+                // Push tag to remote(s)
+                .then(() => Promise.all(Map(modules, (module) => {
+                    log.info(
+                        `[${module.name}] ${Chalk.cyan(
+                            `Pushing ${tag} (${module.commit}) -> ${tag} (remotes: ${remotes.join(', ')})`
+                        )}`
+                    );
+
+                    // Push tag for module to remote(s)
+                    return pushTag(log, module, remotes, tag, { dryRun }).then(() => {
+                        log.info(
+                            `[${module.name}] ${Chalk.green(
+                                `Pushed ${tag} (${module.commit}) -> ${tag} (remotes: ${remotes.join(', ')})`
+                            )}`
+                        );
+
+                        // Mark module as pushed
+                        pushed[module.name] = true;
+                    });
+                })))
+        ).then(() => {
             if(pushed[browser.extension.name] !== true) {
                 log.debug(`[${browser.extension.name}] No release pushed, ignoring the generation of release notes`);
                 return Promise.resolve();
             }
 
             // Update package release
-            return updatePackageRelease(log, browser.extension, repository, modules, tag);
+            return updatePackageRelease(log, browser.extension, packageRepository, modules, tag, { dryRun });
         });
+    }, () => {
+        return Promise.reject(new Error(
+            'No release available to push'
+        ));
     });
 }
 
@@ -348,11 +417,12 @@ export const PushRelease = Task.create({
     name: 'release:push',
     description: 'Push release to remote(s).',
 
-    command: (cmd) => (
-        cmd.option('--remote <remote>', 'Remote [default: all]', Remotes)
+    command: (cmd) => (cmd
+        .option('--dry-run', 'Don\'t execute any actions')
+        .option('--remote <remote>', 'Remote [default: all]', Remotes)
     )
-}, (log, browser, environment, {remote}) => {
-    return pushRelease(log, browser, remote);
+}, (log, browser, environment, {remote, ...options}) => {
+    return pushRelease(log, browser, remote, options);
 }, {
     remote: null
 });

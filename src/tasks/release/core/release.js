@@ -86,7 +86,20 @@ function openEditor(module, notes) {
         .then(() => Filesystem.readFile(path, { encoding: 'utf8' }));
 }
 
-export function createRelease(log, module, repository, tag) {
+export function createRelease(log, module, repository, tag, options) {
+    options = {
+        dryRun: false,
+
+        ...(options || {})
+    };
+
+    // Resolve immediately for dry runs
+    if(options.dryRun) {
+        log.info(`Creating release "${tag}" on "NeApp/${module.name}" (skipped, dry run)`);
+        return Promise.resolve();
+    }
+
+    // Retrieve tag details
     return GithubApi.repos.getReleaseByTag({
         owner: 'NeApp',
         repo: module.name,
@@ -121,7 +134,20 @@ export function createRelease(log, module, repository, tag) {
     });
 }
 
-export function updatePackageRelease(log, extension, repository, modules, tag) {
+export function updatePackageRelease(log, extension, repository, modules, tag, options) {
+    options = {
+        dryRun: false,
+
+        ...(options || {})
+    };
+
+    // Resolve immediately for dry runs
+    if(options.dryRun) {
+        log.info(`Updating package release "${tag}" on "NeApp/${module.name}" (skipped, dry run)`);
+        return Promise.resolve();
+    }
+
+    // Retrieve tag details
     return GithubApi.repos.getReleaseByTag({
         owner: 'NeApp',
         repo: extension.name,
