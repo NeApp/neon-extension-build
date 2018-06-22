@@ -368,6 +368,7 @@ function pushRelease(log, browser, remotes, options) {
                 // Resolve version commit sha
                 return repository.revparse(`${tag}~0`).then((commit) => ({
                     name: module.name,
+                    path: module.path,
 
                     commit: commit.trim(),
                     repository
