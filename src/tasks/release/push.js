@@ -7,7 +7,7 @@ import SemanticVersion from 'semver';
 import SimpleGit from 'simple-git/promise';
 import Travis from 'travis-ci';
 
-import {GithubApi} from '../../core/github';
+import Github, {GithubApi} from '../../core/github';
 import {Task} from '../../core/helpers';
 import {createRelease, updatePackageRelease} from './core/release';
 import {getPackages} from './core/helpers';
@@ -438,7 +438,11 @@ export const PushRelease = Task.create({
         .option('--remote <remote>', 'Remote [default: all]', Remotes)
     )
 }, (log, browser, environment, {remote, ...options}) => {
-    return pushRelease(log, browser, remote, options);
+    // Ensure account is authenticated
+    return Github.isAuthenticated().then(() =>
+        // Push release to GitHub
+        pushRelease(log, browser, remote, options)
+    );
 }, {
     remote: null
 });
