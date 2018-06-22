@@ -14,7 +14,7 @@ import {runSequential} from '../../../core/helpers/promise';
 const Editor = detectEditor().catch(() => null);
 
 const GroupTitleRegex = /(Added|Changed|Fixed)\n/g;
-const NotesRegex = /(((Added|Changed|Fixed)\n( - .*\n)+\n?)+)/;
+const NotesRegex = /(((Added|Changed|Fixed)\n(\s*-\s.*\n)+\n*)+)/;
 
 function extractReleaseNotes(message) {
     message = message.replace(/\r\n/g, '\n');
