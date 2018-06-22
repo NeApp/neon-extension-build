@@ -115,14 +115,15 @@ function getTravisStatus(log, module, ref, options) {
 
 function awaitTravisBuild(log, module, ref, id, options) {
     options = {
-        retryAttempts: 120,
-        retryInterval: 15 * 1000,
+        maximumAttempts: 120,
+        maximumInterval: 45 * 1000,
 
         ...(options || {})
     };
 
     return new Promise((resolve, reject) => {
         let attempts = 0;
+        let interval = 15 * 1000;
 
         function run() {
             attempts++;
@@ -131,8 +132,13 @@ function awaitTravisBuild(log, module, ref, id, options) {
                 log.info(`[${module.name}] Building "${ref}" on Travis CI... (2 ~ 5 minutes)`);
             }
 
+            // Increase interval
+            if(interval < options.maximumInterval) {
+                interval = (15 + Math.floor(attempts / 5)) * 1000;
+            }
+
             // Stop retrying after the maximum attempts have been reached
-            if(attempts > options.retryAttempts) {
+            if(attempts > options.maximumAttempts) {
                 reject(new Error(`Build timeout for "${id}"`));
                 return;
             }
@@ -142,7 +148,13 @@ function awaitTravisBuild(log, module, ref, id, options) {
             // Retrieve build details for `id`
             travis.builds(id).get((err, res) => {
                 if(err) {
-                    reject(err);
+                    log.warn(
+                        `[${module.name}] (Travis CI) Error: ${(err && err.stack) ? err.stack : err} ` +
+                        `(will try again in ${options.maximumInterval / 1000}s)`
+                    );
+
+                    // Back-off and try again at the maximum interval
+                    setTimeout(run, options.maximumInterval);
                     return;
                 }
 
@@ -158,7 +170,7 @@ function awaitTravisBuild(log, module, ref, id, options) {
 
                 // Ensure build has finished
                 if(['created', 'started'].indexOf(build['state']) >= 0) {
-                    setTimeout(run, options.retryInterval);
+                    setTimeout(run, interval);
                     return;
                 }
 
