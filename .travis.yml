@@ -6,13 +6,14 @@ before_install:
 install:
 - npm install
 - npm ls || true
-- npm install coveralls
+- git diff --exit-code
 script:
 - git reset --hard
 - npm run build
 - npm run coverage:jasmine
 - npm run lint
 after_success:
+- npm install -g coveralls
 - npm run coverage:upload
 deploy:
   provider: npm
