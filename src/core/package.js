@@ -350,6 +350,11 @@ export function writePackageLocks(path, versions = null, options = null) {
         path = Path.join(path, 'package-lock.json');
     }
 
+    // Ensure package locks exist
+    if(!Filesystem.existsSync(path)) {
+        return Promise.resolve(false);
+    }
+
     // Read package locks
     return Filesystem.readFile(path).then((data) => {
         let previous = JSON.parse(data);
