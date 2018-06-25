@@ -255,7 +255,7 @@ function pushBranch(log, module, remotes, tag, branch, options) {
             sha: module.commit,
             createdAfter: startedAt
         }).then((state) => {
-            if(state === 'failure') {
+            if(state !== 'passed') {
                 return Promise.reject(new Error(
                     `Build failed for ${module.name}#${branch}`
                 ));
