@@ -39,9 +39,17 @@ function getReleaseNotes(module, tag) {
             return null;
         }
 
+        // Retrieve release notes
+        let body = data.body.trim();
+
+        if(body.length < 1) {
+            return null;
+        }
+
+        // Build release notes
         return (
             `### [${module.name}](https://github.com/NeApp/${module.name}/releases/tag/${tag})\n\n` +
-            `${data.body.trim()}`
+            `${body}`
         );
     }, () => {
         return null;
