@@ -35,12 +35,12 @@ function isPatchRelease(current, next) {
 }
 
 function createReleases(log, browser, version, options) {
-    if(options.commit) {
-        log.debug('Creating releases...');
-    } else {
+    if(options.commit === false) {
         log.info('Creating releases... (skipped)');
         return Promise.resolve();
     }
+
+    log.debug('Creating releases...');
 
     // Create releases for each module with changes
     return runSequential(getPackages(browser), (module) => {
