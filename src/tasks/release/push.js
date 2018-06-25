@@ -1,4 +1,5 @@
 import Chalk from 'chalk';
+import Filter from 'lodash/filter';
 import Find from 'lodash/find';
 import IsNil from 'lodash/isNil';
 import IsString from 'lodash/isString';
@@ -379,6 +380,9 @@ function pushRelease(log, browser, remotes, options) {
                 )}`);
             });
         }).then((modules) =>
+            // Remove ignored modules
+            Filter(modules, (module) => !IsNil(module))
+        ).then((modules) =>
             Promise.resolve()
                 // Push branches to remote(s)
                 .then(() => runSequential(getTargetBranches(tag), (branch) => Promise.all(Map(modules, (module) => {
