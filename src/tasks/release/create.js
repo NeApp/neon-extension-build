@@ -1,6 +1,7 @@
 import Chalk from 'chalk';
 import CloneDeep from 'lodash/cloneDeep';
 import Filesystem from 'fs-extra';
+import Filter from 'lodash/filter';
 import IsEqual from 'lodash/isEqual';
 import IsNil from 'lodash/isNil';
 import IsPlainObject from 'lodash/isPlainObject';
@@ -20,7 +21,8 @@ import {writeContributors} from '../contributors';
 
 export const ReleaseFiles = [
     'contributors.json',
-    'package.json'
+    'package.json',
+    'package-lock.json'
 ];
 
 function isPatchRelease(current, next) {
@@ -62,10 +64,14 @@ function createReleases(log, browser, version, options) {
             return Promise.resolve()
                 // Commit changes
                 .then(() => {
-                    log.debug(`[${module.name}] Committing changes: ${ReleaseFiles.join(', ')}`);
+                    let files = Filter(ReleaseFiles, (name) =>
+                        Filesystem.existsSync(Path.join(module.path, name))
+                    );
+
+                    log.debug(`[${module.name}] Committing changes... (files: ${files.join(', ')})`);
 
                     // Commit changes to repository
-                    return repository.commit(`Bumped version to ${version}`, ReleaseFiles).then((summary) => {
+                    return repository.commit(`Bumped version to ${version}`, files).then((summary) => {
                         log.info(Chalk.green(`[${module.name}] Committed changes (${summary.commit})`));
                     });
                 })
