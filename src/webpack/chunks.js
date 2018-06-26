@@ -241,6 +241,13 @@ export function createChunks(browser, environment) {
             'neon-extension-core/Services/App'
         ],
 
+        'Background/Services/Callback': [
+            ...browser.webpack.common,
+            ...getServices(modules, Services.Configuration),
+
+            'neon-extension-core/Services/Callback'
+        ],
+
         'Background/Services/ContentScript': [
             ...browser.webpack.common,
             ...getServices(modules, Services.Configuration),

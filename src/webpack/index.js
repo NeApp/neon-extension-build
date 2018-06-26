@@ -416,6 +416,7 @@ export function createConfiguration(browser, environment) {
                     'Background/Messaging',
 
                     'Background/Services/App',
+                    'Background/Services/Callback',
                     'Background/Services/ContentScript',
                     'Background/Services/Library',
                     'Background/Services/Migrate',
