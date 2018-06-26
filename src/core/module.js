@@ -16,6 +16,7 @@ import Uniq from 'lodash/uniq';
 import Util from 'util';
 
 import Git from './git';
+import Json from './json';
 import Version from './version';
 import Vorpal from './vorpal';
 import {readPackageDetails} from './package';
@@ -154,24 +155,42 @@ function parseModuleManifest(extension, data) {
     return manifest;
 }
 
-function readModuleManifest(extension, path) {
-    // Read module manifest from file
-    return Filesystem.readJson(Path.join(path, 'module.json')).then((data) => {
-        if(!IsPlainObject(data)) {
+function readModuleManifest(path, browser = null) {
+    let name = 'module.json';
+
+    if(!IsNil(browser)) {
+        name = `module.${browser}.json`;
+    }
+
+    // Read manifest from file
+    return Json.read(Path.join(path, name), {}).then((manifest) => {
+        if(!IsPlainObject(manifest)) {
             return Promise.reject(new Error(
                 'Expected manifest to be a plain object'
             ));
         }
 
-        // Parse module manifest
-        return parseModuleManifest(extension, data);
-    }, () => {
-        // Return default module manifest
-        return parseModuleManifest(extension, {});
-    });
+        return manifest;
+    }, () => (
+        {}
+    ));
 }
 
-export function resolve(extension, path, type, name) {
+function getModuleManifest(extension, module) {
+    return readModuleManifest(module.path).then(
+        (manifest) => parseModuleManifest(extension, manifest),
+        () => parseModuleManifest(extension, {})
+    );
+}
+
+function overlayModuleManifest(module, browser) {
+    return readModuleManifest(module.path, browser).then((manifest) => ({
+        ...module.manifest,
+        ...manifest
+    }));
+}
+
+export function resolve(browser, extension, path, type, name) {
     let moduleType = ModuleType[type];
 
     if(IsNil(moduleType)) {
@@ -295,7 +314,7 @@ export function resolve(extension, path, type, name) {
             contributors
         })))
         // Resolve module manifest
-        .then((module) => readModuleManifest(extension, module.path).then((manifest) => ({
+        .then((module) => getModuleManifest(extension, module).then((manifest) => ({
             ...module,
             ...manifest,
 
@@ -305,10 +324,18 @@ export function resolve(extension, path, type, name) {
         .then((module) => ({
             ...module,
             ...Version.resolve(module)
-        }));
+        }))
+        // Resolve module manifest overlay
+        .then((module) => overlayModuleManifest(module, browser.name).then((manifest) => ({
+            ...module,
+            ...manifest,
+
+            // Manifest
+            manifest
+        })));
 }
 
-export function resolveMany(path, extension) {
+export function resolveMany(path, browser, extension) {
     // Resolve each module sequentially
     return runSequential(Reduce(extension.modules, (modules, names, type) => {
         modules.push(...Map(names, (name) => {
@@ -319,7 +346,7 @@ export function resolveMany(path, extension) {
     }, [
         { type: 'tool', name: 'neon-extension-build' }
     ]), ({ type, name }) =>
-        resolve(extension, path, type, name)
+        resolve(browser, extension, path, type, name)
     ).then((modules) => {
         return KeyBy(modules, 'name');
     });

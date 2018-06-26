@@ -138,13 +138,13 @@ function getBuildManifest(path) {
     });
 }
 
-export function resolve(packageDir, path, name) {
-    return Promise.resolve({ type: 'package', path })
+export function resolve(packageDir, browser) {
+    return Promise.resolve({ type: 'package', path: browser.path })
         // Resolve package details
-        .then((extension) => readPackageDetails(path).then((pkg) => {
-            if(pkg.name !== name) {
+        .then((extension) => readPackageDetails(browser.path).then((pkg) => {
+            if(pkg.name !== browser.package) {
                 return Promise.reject(new Error(
-                    `Invalid package: ${pkg.name} (expected: ${name})`
+                    `Invalid package: ${pkg.name} (expected: ${browser.package})`
                 ));
             }
 
@@ -161,14 +161,14 @@ export function resolve(packageDir, path, name) {
             };
         }))
         // Resolve extension manifest
-        .then((extension) => getExtensionManifest(extension, path).then((manifest) => ({
+        .then((extension) => getExtensionManifest(extension, browser.path).then((manifest) => ({
             ...extension,
             ...manifest,
 
             manifest
         })))
         // Resolve build manifest
-        .then((extension) => getBuildManifest(path).then((build) => ({
+        .then((extension) => getBuildManifest(browser.path).then((build) => ({
             ...extension,
 
             build
@@ -180,18 +180,18 @@ export function resolve(packageDir, path, name) {
             }
 
             // Return repository status from the build manifest
-            if(!IsNil(extension.build[name])) {
-                if(!IsNil(extension.build[name].repository)) {
-                    return extension.build[name].repository;
+            if(!IsNil(extension.build[browser.package])) {
+                if(!IsNil(extension.build[browser.package].repository)) {
+                    return extension.build[browser.package].repository;
                 }
 
                 Logger.warn(Chalk.yellow(
-                    `[${PadEnd(name, 40)}] No repository status available in the build manifest`
+                    `[${PadEnd(browser.package, 40)}] No repository status available in the build manifest`
                 ));
             }
 
             // Resolve repository status
-            return Git.status(path).catch(() => ({
+            return Git.status(browser.path).catch(() => ({
                 ahead: 0,
                 dirty: false,
 
@@ -202,10 +202,13 @@ export function resolve(packageDir, path, name) {
                 latestTag: null
             }));
         }).then((repository) => {
-            Logger.debug(`[${PadEnd(name, 40)}] Repository: ${Util.inspect(repository)}`);
+            Logger.debug(`[${PadEnd(browser.package, 40)}] Repository: ${Util.inspect(repository)}`);
 
             if(IsNil(repository.commit) && !repository.dirty) {
-                Logger.error(Chalk.red(`[${PadEnd(name, 40)}] Invalid repository status (no commit defined)`));
+                Logger.error(Chalk.red(
+                    `[${PadEnd(browser.package, 40)}] Invalid repository status (no commit defined)`
+                ));
+
                 return Promise.reject();
             }
 
@@ -232,20 +235,20 @@ export function resolve(packageDir, path, name) {
             }
 
             // Return travis status from the build manifest
-            if(!IsNil(extension.build[name])) {
-                if(!IsNil(extension.build[name].travis)) {
-                    return extension.build[name].travis;
+            if(!IsNil(extension.build[browser.package])) {
+                if(!IsNil(extension.build[browser.package].travis)) {
+                    return extension.build[browser.package].travis;
                 }
 
                 Logger.warn(Chalk.yellow(
-                    `[${PadEnd(name, 40)}] No travis status available in the build manifest`
+                    `[${PadEnd(browser.package, 40)}] No travis status available in the build manifest`
                 ));
             }
 
             // Resolve travis status
             return Travis.status();
         }).then((travis) => {
-            Logger.debug(`[${PadEnd(name, 40)}] Travis: ${Util.inspect(travis)}`);
+            Logger.debug(`[${PadEnd(browser.package, 40)}] Travis: ${Util.inspect(travis)}`);
 
             return {
                 ...extension,
@@ -262,7 +265,7 @@ export function resolve(packageDir, path, name) {
             };
         }))
         // Resolve modules
-        .then((extension) => Module.resolveMany(packageDir, extension).then((modules) => ({
+        .then((extension) => Module.resolveMany(packageDir, browser, extension).then((modules) => ({
             ...extension,
 
             modules
@@ -280,7 +283,7 @@ export function resolve(packageDir, path, name) {
             channel: getBuildChannel(extension)
         }))
         // Resolve extension manifest overlay
-        .then((extension) => overlayExtensionManifest(extension, path).then((manifest) => ({
+        .then((extension) => overlayExtensionManifest(extension, browser.path).then((manifest) => ({
             ...extension,
 
             // Extension

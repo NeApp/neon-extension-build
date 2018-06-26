@@ -77,7 +77,7 @@ export function resolve(packageDir, browser) {
             ...findBrowser(packageDir, browser)
         }))
         // Resolve extension
-        .then((browser) => Extension.resolve(packageDir, browser.path, browser.package).then((extension) => ({
+        .then((browser) => Extension.resolve(packageDir, browser).then((extension) => ({
             ...browser,
 
             features: resolveFeatures(extension.features),
