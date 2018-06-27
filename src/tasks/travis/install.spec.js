@@ -4,19 +4,21 @@ import {getBranches} from './install';
 describe('Commands', () => {
     describe('install:travis', () => {
         describe('getBranches', () => {
-            it('should handle default branches', () => {
-                expect(getBranches('develop')).toEqual([
-                    'develop',
-                    'master'
-                ]);
-
+            it('master', () => {
                 expect(getBranches('master')).toEqual([
                     'master',
                     'develop'
                 ]);
             });
 
-            it('should handle unknown branches', () => {
+            it('develop', () => {
+                expect(getBranches('develop')).toEqual([
+                    'develop',
+                    'master'
+                ]);
+            });
+
+            it('feature/test', () => {
                 expect(getBranches('feature/test')).toEqual([
                     'feature/test',
                     'develop',
@@ -24,9 +26,17 @@ describe('Commands', () => {
                 ]);
             });
 
-            it('should handle version tags', () => {
-                expect(getBranches('v1.0.0')).toEqual([
-                    'v1.0.0',
+            it('v1.9.0', () => {
+                expect(getBranches('v1.9.0')).toEqual([
+                    'v1.9.0',
+                    'master'
+                ]);
+            });
+
+            it('v1.9.0-beta.1', () => {
+                expect(getBranches('v1.9.0-beta.1')).toEqual([
+                    'v1.9.0-beta.1',
+                    'develop',
                     'master'
                 ]);
             });

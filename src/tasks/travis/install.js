@@ -5,6 +5,7 @@ import Merge from 'lodash/merge';
 import Mkdirp from 'mkdirp';
 import Path from 'path';
 import Process from 'process';
+import SemanticVersion from 'semver';
 
 import Git from '../../core/git';
 import Github from '../../core/github';
@@ -19,7 +20,7 @@ import {resolveOne, runSequential} from '../../core/helpers/promise';
 export function getBranches(current) {
     let branches;
 
-    if(current.indexOf('v') === 0) {
+    if(SemanticVersion.valid(current) && IsNil(SemanticVersion.prerelease(current))) {
         branches = ['master'];
     } else {
         branches = ['develop', 'master'];
