@@ -299,7 +299,7 @@ function pushTag(log, module, remotes, tag, options) {
             // Wait 15s before the first status request (hopefully enough time for the status to be updated)
             delay: 15 * 1000
         }).then((state) => {
-            if(state === 'failure') {
+            if(state !== 'passed') {
                 return Promise.reject(new Error(
                     `Build failed for ${module.name}#${tag}`
                 ));
