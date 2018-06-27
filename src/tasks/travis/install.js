@@ -17,28 +17,18 @@ import {getPackageModules, writePackage, writePackageLocks} from '../../core/pac
 import {resolveOne, runSequential} from '../../core/helpers/promise';
 
 
-export function getBranches(current) {
-    let branches;
-
-    if(SemanticVersion.valid(current) && IsNil(SemanticVersion.prerelease(current))) {
-        branches = ['master'];
-    } else {
-        branches = ['develop', 'master'];
+export function getBranches(ref) {
+    if(['master', 'develop'].indexOf(ref) >= 0) {
+        return [ref];
     }
 
-    // Find existing position of `current`
-    let i = branches.indexOf(current);
-
-    if(i < 0) {
-        // Add current branch to front
-        branches.unshift(current);
-    } else if(i > 0) {
-        // Move current branch to front
-        branches.splice(i, 1);
-        branches.unshift(current);
+    // Release
+    if(SemanticVersion.valid(ref)) {
+        return [ref, `v${SemanticVersion.major(ref)}.${SemanticVersion.minor(ref)}`];
     }
 
-    return branches;
+    // Feature
+    return [ref, 'develop'];
 }
 
 export function clone(target, branch, name) {
