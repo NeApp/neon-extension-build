@@ -36,6 +36,13 @@ describe('Commands', () => {
                     'v1.9'
                 ]);
             });
+
+            it('v1.9', () => {
+                expect(getBranches('v1.9')).toEqual([
+                    'v1.9',
+                    'develop'
+                ]);
+            });
         });
     });
 });
