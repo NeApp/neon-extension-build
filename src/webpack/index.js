@@ -31,7 +31,7 @@ function encodeExtensionManifest(browser) {
     return {
         // Browser
         ...Pick(browser, [
-            'versionName',
+            'versionName'
         ]),
 
         // Extension
