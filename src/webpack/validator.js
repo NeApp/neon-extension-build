@@ -228,11 +228,11 @@ export class Validator {
             };
         }
 
-        // Ensure dependency is pinned to a version
-        if(!moduleDependency.match(DependencyVersionRegex)) {
+        // Ensure dependency isn't pinned to a version
+        if(moduleDependency.match(DependencyVersionRegex)) {
             Logger.error(
                 `Dependency "${dep.name}" for "${module.name}" ` +
-                `should be pinned to a version (found: ${moduleDependency})`
+                `shouldn\'t be pinned to a version (found: ${moduleDependency})`
             );
 
             this._error = true;
