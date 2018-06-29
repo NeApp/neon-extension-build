@@ -195,7 +195,8 @@ function updatePackages(log, browser, version, options) {
                 return `file:${name}-${version}.tgz`;
             }
 
-            return version;
+            // Return patch release range (^1.0, or ^v1.0.0-beta)
+            return `^${version.substring(0, version.lastIndexOf('.'))}`;
         }
 
         // Update module versions in [package-lock.json]
