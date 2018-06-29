@@ -74,7 +74,7 @@ export const SourceArchiveTask = Task.create({
         .then(() => writeBuildDetails(browser, environment))
         // Create an archive of browser sources
         .then(() => createZip({
-            archive: Path.join(environment.buildPath, `Neon-${browser.title}-${browser.versionName}-sources.zip`),
+            archive: Path.join(environment.buildPath, `Radon-${browser.title}-${browser.versionName}-sources.zip`),
 
             source: environment.output.source,
             pattern: '{Assets/**/*,*.json,*.md,.*}'

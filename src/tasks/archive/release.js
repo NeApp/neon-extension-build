@@ -16,7 +16,7 @@ export const ReleaseArchiveTask = Task.create({
     ]
 }, (log, browser, environment) => {
     return createZip({
-        archive: Path.join(environment.buildPath, `Neon-${browser.title}-${browser.versionName}.zip`),
+        archive: Path.join(environment.buildPath, `Radon-${browser.title}-${browser.versionName}.zip`),
 
         source: environment.outputPath,
         pattern: '**/*'

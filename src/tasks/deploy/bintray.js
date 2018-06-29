@@ -38,14 +38,14 @@ function createDescriptor(browser) {
         'files': [
             {
                 'includePattern': 'Build/Production/(.*\\.zip)',
-                'uploadPattern': '$1',
+                'uploadPattern': `Radon-${browser.title}-${browser.versionName}/$1`,
                 'matrixParams': {
                     'override': 1
                 }
             },
             {
                 'includePattern': 'Build/Production/(MD5SUMS|webpack.*)',
-                'uploadPattern': `Neon-${browser.title}-${browser.versionName}/$1`,
+                'uploadPattern': `Radon-${browser.title}-${browser.versionName}/$1`,
                 'matrixParams': {
                     'override': 1
                 }
