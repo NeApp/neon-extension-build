@@ -41,8 +41,16 @@ function generateVersion({travis, version}) {
     return version;
 }
 
+function isTagValid({ repository, tag, version}) {
+    if(IsNil(tag) || repository.dirty) {
+        return true;
+    }
+
+    return tag.indexOf(`v${version}`) === 0;
+}
+
 export function resolve(module) {
-    if(!IsNil(module.tag) && module.tag.indexOf(`v${module.version}`) !== 0) {
+    if(!isTagValid(module)) {
         throw new Error(`Tag "${module.tag}" should match the package version "${module.version}"`);
     }
 
@@ -52,7 +60,7 @@ export function resolve(module) {
 }
 
 export function resolveBrowser(browser) {
-    if(!IsNil(browser.extension.tag) && browser.extension.tag.indexOf(`v${browser.extension.version}`) !== 0) {
+    if(!isTagValid(browser.extension)) {
         throw new Error(
             `Tag "${browser.extension.tag}" should match the package version "${browser.extension.version}"`
         );
