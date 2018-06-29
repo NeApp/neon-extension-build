@@ -27,14 +27,23 @@ function cleanModuleIdentifier(value) {
     return value.replace(/\s/g, '/').replace(/\\/g, '/');
 }
 
-function encodeExtensionManifest(extension) {
+function encodeExtensionManifest(browser) {
     return {
-        ...Pick(extension, [
+        // Browser
+        ...Pick(browser, [
+            'versionName',
+        ]),
+
+        // Extension
+        ...Pick(browser.extension, [
             'name',
             'version',
 
             'title',
             'description',
+
+            // Repository Details
+            'repository',
 
             // Required Permissions
             'origins',
@@ -58,6 +67,9 @@ function encodeModuleManifests(modules) {
 
         'content_scripts',
         'services',
+
+        // Repository Details
+        'repository',
 
         // Required Permissions
         'origins',
@@ -485,7 +497,7 @@ export function createConfiguration(browser, environment) {
                     features: browser.features
                 }),
                 'neon.manifests': JSON.stringify({
-                    'neon-extension': encodeExtensionManifest(browser.extension),
+                    'neon-extension': encodeExtensionManifest(browser),
 
                     ...encodeModuleManifests(browser.modules)
                 }),
