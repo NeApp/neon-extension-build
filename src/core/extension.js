@@ -56,11 +56,15 @@ function isDirty({repository, modules}) {
             continue;
         }
 
-        if(modules[name].repository.dirty) {
+        let module = modules[name];
+
+        // Check if module is dirty or ahead of latest tag
+        if(module.repository.ahead > 0 || module.repository.dirty) {
             return true;
         }
     }
 
+    // No dirty modules found
     return false;
 }
 

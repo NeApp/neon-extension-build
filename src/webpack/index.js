@@ -29,10 +29,10 @@ function cleanModuleIdentifier(value) {
 
 function encodeExtensionManifest(browser) {
     return {
-        // Browser
-        ...Pick(browser, [
-            'versionName'
-        ]),
+        name: null,
+
+        version: null,
+        versionName: null,
 
         // Extension
         ...Pick(browser.extension, [
@@ -42,9 +42,6 @@ function encodeExtensionManifest(browser) {
             'title',
             'description',
 
-            // Repository Details
-            'repository',
-
             // Required Permissions
             'origins',
             'permissions',
@@ -52,7 +49,20 @@ function encodeExtensionManifest(browser) {
             // Optional Permissions
             'optional_origins',
             'optional_permissions'
-        ])
+        ]),
+
+        // Browser
+        ...Pick(browser, [
+            'version',
+            'versionName'
+        ]),
+
+        // Repository Details
+        repository: {
+            ...browser.extension.repository,
+
+            dirty: browser.extension.dirty
+        }
     };
 }
 
