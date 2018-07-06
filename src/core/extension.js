@@ -46,6 +46,24 @@ function getBuildChannel({dirty, tag}) {
     return 'stable';
 }
 
+function getTag({ repository, modules }) {
+    if(IsNil(repository.tag)) {
+        return null;
+    }
+
+    for(let name in modules) {
+        if(!modules.hasOwnProperty(name)) {
+            continue;
+        }
+
+        if(IsNil(modules[name].repository.tag)) {
+            return null;
+        }
+    }
+
+    return repository.tag;
+}
+
 function isDirty({repository, modules}) {
     if(repository.dirty) {
         return true;
@@ -56,10 +74,7 @@ function isDirty({repository, modules}) {
             continue;
         }
 
-        let module = modules[name];
-
-        // Check if module is dirty or ahead of latest tag
-        if(module.repository.ahead > 0 || module.repository.dirty) {
+        if(modules[name].repository.dirty) {
             return true;
         }
     }
@@ -274,11 +289,12 @@ export function resolve(packageDir, browser) {
 
             modules
         })))
-        // Resolve extension "dirty" state
+        // Resolve extension state
         .then((extension) => ({
             ...extension,
 
-            dirty: isDirty(extension)
+            dirty: isDirty(extension),
+            tag: getTag(extension)
         }))
         // Resolve build channel
         .then((extension) => ({
