@@ -6,7 +6,6 @@ import Get from 'lodash/get';
 import IsNil from 'lodash/isNil';
 import Path from 'path';
 import Set from 'lodash/set';
-import UniqBy from 'lodash/uniqBy';
 
 import ValidatorPlugin from './plugins/validator';
 import Vorpal from '../core/vorpal';
@@ -22,18 +21,14 @@ const IgnoredPackages = [
     'webpack'
 ];
 
-export class Validator {
+export default class Validator {
+    static links = {};
+
     constructor() {
         this.checked = {};
         this.dependencies = {};
 
-        this.links = {};
-
         this._error = false;
-    }
-
-    createPlugin(browser, environment) {
-        return new ValidatorPlugin(this, browser, environment);
     }
 
     validate(browser, environment, module) {
@@ -64,7 +59,7 @@ export class Validator {
         let dep;
 
         try {
-            dep = this._parseDependency(request);
+            dep = Validator.parseDependency(request);
         } catch(e) {
             Logger.warn(`Unable to parse dependency: "${request}": ${e}`);
             return false;
@@ -245,58 +240,6 @@ export class Validator {
         };
     }
 
-    registerLink(browser, environment, source, target) {
-        let dep;
-
-        // Retrieve dependency name
-        try {
-            dep = this._parseDependency(source);
-        } catch(e) {
-            Logger.warn(`Unable to parse dependency: "${source}": ${e}`);
-            return;
-        }
-
-        // Ignore modules
-        if(dep.name.indexOf('@radon-extension/') === 0) {
-            return;
-        }
-
-        // Prefer browser package sources
-        let current = Get(this.links, [browser.name, environment.name, target]);
-
-        if(!IsNil(current)) {
-            let module = Path.basename(current.substring(0, current.lastIndexOf('node_modules') - 1));
-
-            if(browser.package === module) {
-                return;
-            }
-        }
-
-        // Register link
-        Set(this.links, [browser.name, environment.name, target], source);
-    }
-
-    resolveLink(browser, environment, path) {
-        if(IsNil(path)) {
-            return path;
-        }
-
-        // Map linked dependency source
-        ForEach(Get(this.links, [browser.name, environment.name]), (source, target) => {
-            let index = path.indexOf(target);
-
-            if(index < 0) {
-                return true;
-            }
-
-            // Update `path`
-            path = source + path.substring(index + target.length);
-            return false;
-        });
-
-        return path;
-    }
-
     resolveModule(browser, path, options) {
         options = {
             dependencies: true,
@@ -325,7 +268,7 @@ export class Validator {
                 return;
             }
 
-            let source = this.resolveLink(browser, environment, reason.module.userRequest);
+            let source = Validator.resolveLink(browser, environment, reason.module.userRequest);
 
             // Resolve module
             if(!IsNil(this.resolveModule(browser, source, { dependencies: false }))) {
@@ -394,7 +337,73 @@ export class Validator {
         }
     }
 
-    _getDependencyName(path) {
+    _isModulePermitted(module, name) {
+        if(IsNil(module)) {
+            return true;
+        }
+
+        return name === '@radon-extension/framework';
+    }
+
+    static createPlugin(browser, environment) {
+        return new ValidatorPlugin(new Validator(), browser, environment);
+    }
+
+    static registerLink(browser, environment, source, target) {
+        let dep;
+
+        // Retrieve dependency name
+        try {
+            dep = Validator.parseDependency(source);
+        } catch(e) {
+            Logger.warn(`Unable to parse dependency: "${source}": ${e}`);
+            return;
+        }
+
+        // Ignore modules
+        if(dep.name.indexOf('@radon-extension/') === 0) {
+            return;
+        }
+
+        // Prefer browser package sources
+        let current = Get(Validator.links, [browser.name, environment.name, target]);
+
+        if(!IsNil(current)) {
+            let module = Path.basename(current.substring(0, current.lastIndexOf('node_modules') - 1));
+
+            if(browser.package === module) {
+                return;
+            }
+        }
+
+        // Register link
+        Set(Validator.links, [browser.name, environment.name, target], source);
+
+        Logger.info(`Registered link: "${source}" -> "${target}"`);
+    }
+
+    static resolveLink(browser, environment, path) {
+        if(IsNil(path)) {
+            return path;
+        }
+
+        // Map linked dependency source
+        ForEach(Get(Validator.links, [browser.name, environment.name]), (source, target) => {
+            let index = path.indexOf(target);
+
+            if(index < 0) {
+                return true;
+            }
+
+            // Update `path`
+            path = source + path.substring(index + target.length);
+            return false;
+        });
+
+        return path;
+    }
+
+    static getDependencyName(path) {
         path = Path.normalize(path);
 
         let pos;
@@ -429,32 +438,7 @@ export class Validator {
         return name.substring(0, pos).replace(/\\/g, '/');
     }
 
-    _getSources(browser, environment, source) {
-        if(IsNil(source.module.userRequest)) {
-            return [source];
-        }
-
-        // Build list of sources
-        let result = [];
-
-        for(let i = 0; i < source.module.reasons.length; i++) {
-            result.push.apply(result, source.module.reasons[i]);
-        }
-
-        return UniqBy(result, (source) =>
-            source.module.userRequest || source.module.name
-        );
-    }
-
-    _isModulePermitted(module, name) {
-        if(IsNil(module)) {
-            return true;
-        }
-
-        return name === '@radon-extension/framework';
-    }
-
-    _parseDependency(request) {
+    static parseDependency(request) {
         if(!Filesystem.existsSync(request)) {
             request = request.substring(0, request.indexOf('/')) || request;
 
@@ -497,7 +481,7 @@ export class Validator {
         let packageName = Filesystem.readJsonSync(packagePath)['name'];
 
         // Validate package name matches path
-        let name = this._getDependencyName(packagePath);
+        let name = Validator.getDependencyName(packagePath);
 
         if(!IsNil(name) && name !== packageName) {
             Logger.warn(`Package "${packageName}" doesn't match path "${name}"`);
@@ -510,5 +494,3 @@ export class Validator {
         };
     }
 }
-
-export default new Validator();
