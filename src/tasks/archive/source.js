@@ -1,4 +1,5 @@
 import IsNil from 'lodash/isNil';
+import MapKeys from 'lodash/mapKeys';
 import MapValues from 'lodash/mapValues';
 import Path from 'path';
 import Pick from 'lodash/pick';
@@ -54,13 +55,15 @@ function writeBuildDetails(browser, environment) {
     let path = Path.join(environment.output.source, 'build.json');
 
     // Write build details
-    Json.write(path, MapValues(browser.modules, (module) => {
+    Json.write(path, MapKeys(MapValues(browser.modules, (module) => {
         if(module.type === 'package') {
             return Pick(module, ['repository', 'travis']);
         }
 
         return Pick(module, ['repository']);
-    }), {
+    }), (module) =>
+        module.name
+    ), {
         spaces: 2
     });
 }
