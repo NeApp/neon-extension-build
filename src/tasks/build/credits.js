@@ -79,8 +79,8 @@ function getLibraries(modules) {
                     continue;
                 }
 
-                // Ignore "neon-extension-" libraries
-                if(library.indexOf('neon-extension-') === 0) {
+                // Ignore radon libraries
+                if(library.indexOf('radon-extension/') === 0) {
                     continue;
                 }
 
@@ -211,13 +211,13 @@ function fetchCredits(name, path) {
                         continue;
                     }
 
-                    // Move "neon-extension-" packages to modules
+                    // Move radon packages to modules
                     person.modules = Filter(person.packages, (name) =>
-                        name.indexOf('neon-extension-') === 0
+                        name.indexOf('radon-extension/') === 0
                     );
 
                     person.packages = Filter(person.packages, (name) =>
-                        name.indexOf('neon-extension-') < 0
+                        name.indexOf('radon-extension/') < 0
                     );
 
                     let key = person.name;
@@ -263,13 +263,8 @@ export const CreditsTask = Task.create({
     // Ensure output directory exists
     Mkdirp.sync(basePath);
 
-    // Build list of packages
-    let modules = Object.values(browser.modules).concat([
-        { name: 'neon-extension-build', path: environment.builderPath }
-    ]);
-
     // Fetch module credits
-    return Promise.all(Map(modules, (pkg) => {
+    return Promise.all(Map(browser.modules, (pkg) => {
         log.debug(`Fetching credits for "${pkg.name}"...`);
 
         return fetchCredits(pkg.name, pkg.path);

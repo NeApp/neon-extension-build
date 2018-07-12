@@ -118,9 +118,9 @@ export function orderModules(modules) {
     let result = [];
 
     ForEach([
-        'neon-extension-build',
-        'neon-extension-framework',
-        'neon-extension-core'
+        '@radon-extension/build',
+        '@radon-extension/framework',
+        '@radon-extension/core'
     ], (name) => {
         if(modules.indexOf(name) < 0) {
             return;
@@ -135,20 +135,20 @@ export function orderModules(modules) {
 
 export function getBrowserModules(browser) {
     return [
-        browser.modules['neon-extension-build'],
-        browser.modules['neon-extension-framework'],
-        browser.modules['neon-extension-core'],
+        browser.modules['build'],
+        browser.modules['framework'],
+        browser.modules['core'],
 
         ...Filter(Values(browser.modules), (module) => [
-            'neon-extension-build',
-            'neon-extension-framework',
-            'neon-extension-core'
+            '@radon-extension/build',
+            '@radon-extension/framework',
+            '@radon-extension/core'
         ].indexOf(module.name) < 0)
     ];
 }
 
 export function getPackageModules(pkg) {
-    if(pkg.name.indexOf('neon-extension-') !== 0) {
+    if(pkg.name.indexOf('@radon-extension/') !== 0) {
         return Promise.reject(new Error(`Invalid module: ${pkg.name}`));
     }
 
@@ -156,7 +156,7 @@ export function getPackageModules(pkg) {
         ...Object.keys(pkg.dependencies || {}),
         ...Object.keys(pkg.peerDependencies || {})
     ], (name) =>
-        name.indexOf('neon-extension-') === 0
+        name.indexOf('@radon-extension/') === 0
     ));
 }
 
@@ -313,7 +313,7 @@ export function updatePackageLocks(locks, versions = null, options = null) {
 
             // Update modules
             ...MapValues(PickBy(locks.dependencies, (_, name) =>
-                name.indexOf('neon-extension-') === 0
+                name.indexOf('@radon-extension/') === 0
             ), (dependency, name) => {
                 // Update version (if provided)
                 if(!IsNil(versions[name])) {

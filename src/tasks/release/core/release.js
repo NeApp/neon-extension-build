@@ -31,7 +31,7 @@ function extractReleaseNotes(message) {
 
 function getReleaseNotes(module, tag) {
     return GithubApi.repos.getReleaseByTag({
-        owner: 'NeApp',
+        owner: 'RadonApp',
         repo: module.name,
         tag
     }).then(({data}) => {
@@ -48,7 +48,7 @@ function getReleaseNotes(module, tag) {
 
         // Build release notes
         return (
-            `### [${module.name}](https://github.com/NeApp/${module.name}/releases/tag/${tag})\n\n` +
+            `### [${module.name}](https://github.com/RadonApp/${module.name}/releases/tag/${tag})\n\n` +
             `${body}`
         );
     }, () => {
@@ -103,13 +103,13 @@ export function createRelease(log, module, repository, tag, options) {
 
     // Resolve immediately for dry runs
     if(options.dryRun) {
-        log.info(`Creating release "${tag}" on "NeApp/${module.name}" (skipped, dry run)`);
+        log.info(`Creating release "${tag}" on "RadonApp/${module.name}" (skipped, dry run)`);
         return Promise.resolve();
     }
 
     // Retrieve tag details
     return GithubApi.repos.getReleaseByTag({
-        owner: 'NeApp',
+        owner: 'RadonApp',
         repo: module.name,
         tag
     }).catch(() => null).then((result) => {
@@ -128,7 +128,7 @@ export function createRelease(log, module, repository, tag, options) {
             .then((notes) => openEditor(module, notes))
             // Create release
             .then((notes) => GithubApi.repos.createRelease({
-                'owner': 'NeApp',
+                'owner': 'RadonApp',
                 'repo': module.name,
 
                 'tag_name': tag,
@@ -151,13 +151,13 @@ export function updatePackageRelease(log, extension, repository, modules, tag, o
 
     // Resolve immediately for dry runs
     if(options.dryRun) {
-        log.info(`Updating package release "${tag}" on "NeApp/${extension.name}" (skipped, dry run)`);
+        log.info(`Updating package release "${tag}" on "RadonApp/${extension.name}" (skipped, dry run)`);
         return Promise.resolve();
     }
 
     // Retrieve tag details
     return GithubApi.repos.getReleaseByTag({
-        owner: 'NeApp',
+        owner: 'RadonApp',
         repo: extension.name,
         tag
     }).then(({data}) => {
@@ -183,7 +183,7 @@ export function updatePackageRelease(log, extension, repository, modules, tag, o
             .then((notes) => GithubApi.repos.editRelease({
                 'id': data.id,
 
-                'owner': 'NeApp',
+                'owner': 'RadonApp',
                 'repo': extension.name,
 
                 'tag_name': tag,

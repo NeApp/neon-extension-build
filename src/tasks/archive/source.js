@@ -31,10 +31,21 @@ export function getModuleVersions(browser) {
             throw new Error(`No commit available for ${module.name}`);
         }
 
+        // Build repository path
+        let repository = module.repository.url;
+
+        if(IsNil(repository)) {
+            throw new Error(`No repository url defined for ${module.name}`);
+        }
+
+        if(repository.indexOf('https://github.com/') === 0) {
+            repository = repository.substring(19);
+        }
+
         // Commit
         return {
-            version: `NeApp/${module.name}#${module.repository.commit}`,
-            from: `${module.name}@NeApp/${module.name}#${module.repository.commit}`
+            version: `${repository}#${module.repository.commit}`,
+            from: `${module.name}@${repository}#${module.repository.commit}`
         };
     });
 }

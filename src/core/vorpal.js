@@ -5,7 +5,7 @@ import VorpalLog from 'vorpal-log';
 
 const vorpal = Vorpal()
     .use(VorpalLog)
-    .delimiter('neon-extension-build$');
+    .delimiter('@radon-extension/build$');
 
 function log(msg) {
     if(typeof msg === 'string') {

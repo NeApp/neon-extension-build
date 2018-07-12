@@ -7,6 +7,7 @@ import ForEach from 'lodash/forEach';
 import FunctionModulePlugin from 'webpack/lib/FunctionModulePlugin';
 import IsNil from 'lodash/isNil';
 import Map from 'lodash/map';
+import MapKeys from 'lodash/mapKeys';
 import MapValues from 'lodash/mapValues';
 import Merge from 'lodash/merge';
 import Path from 'path';
@@ -67,7 +68,7 @@ function encodeExtensionManifest(browser) {
 }
 
 function encodeModuleManifests(modules) {
-    let manifests = MapValues(modules || {}, (module) => Pick(module, [
+    let manifests = MapKeys(MapValues(modules || {}, (module) => Pick(module, [
         'name',
         'type',
         'key',
@@ -88,7 +89,9 @@ function encodeModuleManifests(modules) {
         // Optional Permissions
         'optional_origins',
         'optional_permissions'
-    ]));
+    ])), (manifest) =>
+        `neon-extension-${manifest.type}-${manifest.key}`
+    );
 
     // Sort manifests by key
     return Pick(manifests, Object.keys(manifests).sort());
@@ -191,30 +194,23 @@ function getModuleDetails(browser, environment, path) {
             };
         }
 
-        if(module.name === 'neon-extension-core') {
+        if(module.name === '@radon-extension/core') {
             return {
                 type: 'core',
                 name: module.name
             };
         }
 
-        if(module.name === 'neon-extension-framework') {
+        if(module.name === '@radon-extension/framework') {
             return {
                 type: 'framework',
                 name: module.name
             };
         }
 
-        if(module.name.startsWith('neon-extension-destination-')) {
+        if(module.name.startsWith('@radon-extension/plugin-')) {
             return {
-                type: 'destination',
-                name: module.name
-            };
-        }
-
-        if(module.name.startsWith('neon-extension-source-')) {
-            return {
-                type: 'source',
+                type: 'plugin',
                 name: module.name
             };
         }
@@ -257,7 +253,7 @@ function generateModuleIdentifier(browser, environment, module, fallback) {
 }
 
 function isSharedDependency(browser, name) {
-    return !(IsNil(name) || name.startsWith('neon-extension-'));
+    return !(IsNil(name) || name.startsWith('@radon-extension/'));
 }
 
 function shouldExtractModule(browser, environment, module, count, options) {

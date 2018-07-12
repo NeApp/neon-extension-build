@@ -1,6 +1,21 @@
 {
-  "name": "neon-extension-build",
+  "name": "@radon-extension/build",
   "version": "2.1.0",
+  "description": "Radon Extension: Build Tools",
+  "keywords": [
+    "radon",
+    "radon-extension"
+  ],
+  "homepage": "https://github.com/RadonApp/radon-extension",
+  "author": "Dean Gardiner <me@dgardiner.net>",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/RadonApp/radon-extension/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RadonApp/radon-extension-build"
+  },
   "dependencies": {
     "@babel/cli": "^7.0.0-beta.49",
     "@babel/core": "^7.0.0-beta.49",

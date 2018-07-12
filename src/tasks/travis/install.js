@@ -47,11 +47,11 @@ export function clone(target, branch, name) {
     // Install module
     return resolveOne(getBranches(branch), (branch) => Github.exists(name, branch).then(() => {
         Vorpal.logger.info(
-            `[NeApp/${name}#${branch}] Cloning to "${Path.relative(Process.cwd(), localPath)}...`
+            `[RadonApp/${name}#${branch}] Cloning to "${Path.relative(Process.cwd(), localPath)}...`
         );
 
         // Clone repository
-        return Git.clone(modulesPath, `https://github.com/NeApp/${name}.git`, localPath, [
+        return Git.clone(modulesPath, `https://github.com/RadonApp/${name}.git`, localPath, [
             '-b', branch
         ]).then(() => ({
             branch,
@@ -63,15 +63,15 @@ export function clone(target, branch, name) {
 function link(target, branch, module) {
     // Clone repository for module
     return clone(target, branch, module).then(({branch, localPath}) => {
-        Vorpal.logger.info(`[NeApp/${module}#${branch}] Installing dependencies...`);
+        Vorpal.logger.info(`[RadonApp/${module}#${branch}] Installing dependencies...`);
 
         // Install dependencies
         return Npm.install(localPath).then(
-            Npm.createHandler(Vorpal.logger, `[NeApp/${module}#${branch}]`)
+            Npm.createHandler(Vorpal.logger, `[RadonApp/${module}#${branch}]`)
         ).then(() => {
             let linkPath = `${target}/node_modules/${module}`;
 
-            Vorpal.logger.info(`[NeApp/${module}#${branch}] "${linkPath}" -> "${localPath}"`);
+            Vorpal.logger.info(`[RadonApp/${module}#${branch}] "${linkPath}" -> "${localPath}"`);
 
             // Create link
             return Link.create(linkPath, localPath, [
@@ -80,7 +80,7 @@ function link(target, branch, module) {
             ]);
         });
     }).catch((err) => {
-        Vorpal.logger.warn(`[NeApp/${module}#${branch}] Error raised: ${err.message || err}`);
+        Vorpal.logger.warn(`[RadonApp/${module}#${branch}] Error raised: ${err.message || err}`);
         return Promise.reject(err);
     });
 }
@@ -94,7 +94,7 @@ function linkModuleDependencies(target, branch, modules) {
             return Promise.reject(new Error(`Unable to find module: ${module}`));
         }
 
-        Vorpal.logger.info(`[NeApp/${module}#${branch}] Linking module dependencies...`);
+        Vorpal.logger.info(`[RadonApp/${module}#${branch}] Linking module dependencies...`);
 
         // Read "package.json" file
         return Filesystem.readJson(Path.join(modulePath, 'package.json')).then((pkg) => {
@@ -103,7 +103,7 @@ function linkModuleDependencies(target, branch, modules) {
             }
 
             return runSequential(Object.keys(pkg.peerDependencies), (name) => {
-                if(name.indexOf('neon-extension-') !== 0) {
+                if(name.indexOf('radon-extension-') !== 0) {
                     return Promise.resolve();
                 }
 
@@ -116,7 +116,7 @@ function linkModuleDependencies(target, branch, modules) {
 
                 let linkPath = Path.join(modulePath, 'node_modules', name);
 
-                Vorpal.logger.info(`[NeApp/${module}#${branch}] "${linkPath}" -> "${path}"`);
+                Vorpal.logger.info(`[RadonApp/${module}#${branch}] "${linkPath}" -> "${path}"`);
 
                 // Create link to module
                 return Link.create(linkPath, path, [
@@ -125,7 +125,7 @@ function linkModuleDependencies(target, branch, modules) {
                 ]);
             });
         }).catch((err) => {
-            Vorpal.logger.warn(`[NeApp/${module}#${branch}] Error raised: ${err.message || err}`);
+            Vorpal.logger.warn(`[RadonApp/${module}#${branch}] Error raised: ${err.message || err}`);
             return Promise.reject(err);
         });
     });
@@ -134,13 +134,13 @@ function linkModuleDependencies(target, branch, modules) {
 function pack(target, branch, name) {
     // Clone repository for module
     return clone(target, branch, name).then(({branch, localPath}) => {
-        Vorpal.logger.info(`[NeApp/${name}#${branch}] Installing dependencies...`);
+        Vorpal.logger.info(`[RadonApp/${name}#${branch}] Installing dependencies...`);
 
         // Install dependencies
         return Npm.install(localPath).then(
-            Npm.createHandler(Vorpal.logger, `[NeApp/${name}#${branch}]`)
+            Npm.createHandler(Vorpal.logger, `[RadonApp/${name}#${branch}]`)
         ).then(() => {
-            Vorpal.logger.info(`[NeApp/${name}#${branch}] Packing module...`);
+            Vorpal.logger.info(`[RadonApp/${name}#${branch}] Packing module...`);
 
             // Pack module
             return Npm.pack(target, localPath).then(({stdout, stderr}) => {
@@ -148,17 +148,18 @@ function pack(target, branch, name) {
 
                 let file = lines[lines.length - 1];
 
-                if(file.indexOf('neon-extension-') !== 0) {
-                    Vorpal.logger.error(`[NeApp/${name}#${branch}] Invalid file: ${file}`);
-                    return Promise.reject();
+                if(file.indexOf('radon-extension-') !== 0) {
+                    return Promise.reject(new Error(
+                        `Invalid file: ${file}`
+                    ));
                 }
 
                 Npm.writeLines(Vorpal.logger, stderr, {
                     defaultColour: 'cyan',
-                    prefix: `[NeApp/${name}#${branch}]`
+                    prefix: `[RadonApp/${name}#${branch}]`
                 });
 
-                Vorpal.logger.info(Chalk.green(`[NeApp/${name}#${branch}] ${file}`));
+                Vorpal.logger.info(Chalk.green(`[RadonApp/${name}#${branch}] ${file}`));
 
                 return file;
             }).then((file) => ({
@@ -166,7 +167,7 @@ function pack(target, branch, name) {
             }));
         });
     }).catch((err) => {
-        Vorpal.logger.warn(`[NeApp/${name}#${branch}] Error raised: ${err.message || err}`);
+        Vorpal.logger.warn(`[RadonApp/${name}#${branch}] Error raised: ${err.message || err}`);
         return Promise.reject(err);
     });
 }

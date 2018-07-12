@@ -16,10 +16,10 @@ function createDescriptor(browser) {
             'name': browser.extension.package.name,
             'licenses': ['GPL-3.0'],
 
-            'subject': 'neapp',
-            'repo': 'neon-extension',
+            'subject': 'radon',
+            'repo': 'radon-extension',
 
-            'vcs_url': `https://github.com/NeApp/${browser.extension.package.name}.git`
+            'vcs_url': `${browser.extension.repository.url}.git`
         },
 
         'version': {

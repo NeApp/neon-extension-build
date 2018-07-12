@@ -23,7 +23,7 @@ export const LinkModules = Task.create({
             ...Keys(module.package['dependencies']),
             ...Keys(module.package['peerDependencies'])
         ]), (name) => {
-            if(name.indexOf('neon-extension-') !== 0) {
+            if(name.indexOf('radon-extension-') !== 0) {
                 return Promise.resolve();
             }
 

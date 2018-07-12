@@ -14,9 +14,9 @@ import {getDependencyTree} from '../../core/package';
 const Logger = Vorpal.logger;
 
 const IgnoredPackages = [
-    /^neon-extension-([\w-]+)$/,
+    /^radon-extension-([\w-]+)$/,
 
-    /^(neon-extension-build\/)?travis-ci\/underscore.string$/
+    /^(radon-extension-build\/)?travis-ci\/underscore.string$/
 ];
 
 export function isIgnoredPackage(path) {
@@ -105,7 +105,7 @@ export function validateDependencies(packages, tree, prefix = null) {
         }
 
         // Ensure modules have no "integrity" field defined
-        if(name.indexOf('neon-extension-') === 0 && !IsNil(dependency.integrity)) {
+        if(name.indexOf('@radon-extension/') === 0 && !IsNil(dependency.integrity)) {
             logError(`[${path}] "integrity" field shouldn\'t be defined`);
             success = false;
         }

@@ -8,7 +8,10 @@ import Path from 'path';
 import Browsers from './constants/browsers';
 import Extension from './extension';
 import Version from './version';
+import Vorpal from './vorpal';
 
+
+const Logger = Vorpal.logger;
 
 export function findBrowser(basePath, browser) {
     if(Filesystem.existsSync(Path.join(basePath, 'extension.json'))) {
@@ -28,10 +31,10 @@ export function findBrowser(basePath, browser) {
     }
 
     // Find development package
-    path = Path.join(path, browser.package);
+    path = Path.join(path, browser.repository);
 
     if(!Filesystem.existsSync(path)) {
-        throw new Error(`Unable to find "${browser.name}" browser package`);
+        throw new Error(`Unable to find "${browser.repository}" repository`);
     }
 
     return {
@@ -71,6 +74,8 @@ export function getBrowsers(name) {
 }
 
 export function resolve(packageDir, browser) {
+    Logger.info(`Resolving browser "${browser.name}"`);
+
     return Promise.resolve(CloneDeep(browser))
         .then((browser) => ({
             ...browser,

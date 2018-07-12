@@ -22,7 +22,7 @@ export function exists(name, branch) {
             protocol: 'https:',
             hostname: 'github.com',
             port: 443,
-            path: `/NeApp/${name}/tree/${branch}`
+            path: `/RadonApp/${name}/tree/${branch}`
         }, (res) => {
             if(res.statusCode >= 200 && res.statusCode < 300) {
                 resolve();
@@ -37,7 +37,7 @@ export function exists(name, branch) {
 }
 
 export function isAuthenticated() {
-    return GithubApi.orgs.get({ org: 'NeApp' }).then(({ headers }) => {
+    return GithubApi.orgs.get({ org: 'RadonApp' }).then(({ headers }) => {
         if(IsNil(headers['x-oauth-scopes'])) {
             return Promise.reject(new Error(
                 'GitHub: No authentication token provided'

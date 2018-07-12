@@ -1,8 +1,8 @@
 @echo off
 
-pushd "%~dp0Tools\neon-extension-build"
+pushd "%~dp0Tools\radon-extension-build"
     echo --------------------------------------
-    echo Compiling neon-extension-build...
+    echo Compiling radon-extension-build...
     echo --------------------------------------
     echo.
 
@@ -14,5 +14,5 @@ pushd "%~dp0Tools\neon-extension-build"
     echo --------------------------------------
     echo.
 
-    call node "%~dp0Tools\neon-extension-build\lib\index.js" build --build-dir "%~dp0\Build" --package-dir "%~dp0" %*
+    call node "%~dp0Tools\radon-extension-build\lib\index.js" build --build-dir "%~dp0\Build" --package-dir "%~dp0" %*
 popd

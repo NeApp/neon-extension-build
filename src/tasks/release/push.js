@@ -77,7 +77,7 @@ function getTravisStatus(log, module, ref, options) {
 
             // Retrieve combined status for `ref`
             GithubApi.repos.getCombinedStatusForRef({
-                owner: 'NeApp',
+                owner: 'RadonApp',
                 repo: module.name,
                 ref
             }).then(({data: {sha, statuses}}) => {
@@ -193,7 +193,7 @@ function awaitBuild(log, module, ref, options) {
 
     // Resolve immediately for dry runs
     if(options.dryRun) {
-        log.info(`Waiting for "${ref}" on "NeApp/${module.name}" to finish building (skipped, dry run)`);
+        log.info(`Waiting for "${ref}" on "RadonApp/${module.name}" to finish building (skipped, dry run)`);
         return Promise.resolve('success');
     }
 

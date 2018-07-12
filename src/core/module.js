@@ -33,29 +33,35 @@ const ModuleType = {
     },
     'tool': {
         name: 'tool',
+
         directory: 'Tools/'
     },
 
     'packages': {
         name: 'package',
+
         directory: 'Packages/'
     },
 
     'destinations': {
         name: 'destination',
-        directory: 'Destinations/'
+
+        directory: 'Plugins/',
+        prefix: 'plugin'
     },
     'sources': {
         name: 'source',
-        directory: 'Sources/'
+
+        directory: 'Plugins/',
+        prefix: 'plugin'
     }
 };
 
-function getModulePath(basePath, name, type) {
+function getModulePath(basePath, repository, type) {
     let path;
 
     // Find development module type directory
-    path = Path.resolve(basePath, (type.directory || '') + name);
+    path = Path.resolve(basePath, (type.directory || '') + repository);
 
     if(Filesystem.existsSync(path)) {
         return path;
@@ -67,13 +73,13 @@ function getModulePath(basePath, name, type) {
     }
 
     // Find installed module
-    path = Path.resolve(basePath, 'node_modules', name);
+    path = Path.resolve(basePath, 'node_modules', repository);
 
     if(Filesystem.existsSync(path)) {
         return path;
     }
 
-    throw new Error(`Unable to find "${name}" module`);
+    throw new Error(`Unable to find "${repository}" module`);
 }
 
 function readContributors(path) {
@@ -248,31 +254,29 @@ export function resolve(browser, extension, path, type, name) {
         ));
     }
 
-    // Build module key
-    let key = name.substring(name.lastIndexOf('-') + 1);
+    // Build key
+    let key = name;
 
-    if(key.length < 1) {
-        return Promise.reject(new Error(
-            `Invalid module name: "${name}"`
-        ));
+    if(!IsNil(moduleType.prefix)) {
+        key = `${moduleType.prefix}-${key}`;
     }
 
-    // Build module
-    let module = {
-        key,
-        type: moduleType.name,
-        path: getModulePath(path, name, moduleType)
-    };
+    // Build repository name
+    let repository = `radon-extension-${key}`;
 
     // Resolve module metadata
+    Logger.info(`Resolving module "${name}" (${repository})`);
+
+    let module = {
+        key: name,
+        type: moduleType.name,
+        path: getModulePath(path, repository, moduleType)
+    };
+
     return Promise.resolve(module)
         .then((module) => readPackageDetails(module.path).then((pkg) => ({
             ...module,
-
-            // Extension
-            ...Omit(pkg, [
-                'repository'
-            ]),
+            ...pkg,
 
             // Package
             package: pkg
@@ -316,8 +320,9 @@ export function resolve(browser, extension, path, type, name) {
             Logger.debug(`[${PadEnd(name, 40)}] Repository: ${Util.inspect(repository)}`);
 
             if(IsNil(repository.commit) && !repository.dirty) {
-                Logger.error(Chalk.red(`[${PadEnd(module.name, 40)}] Invalid repository status (no commit defined)`));
-                return Promise.reject();
+                return Promise.reject(new Error(
+                    'Invalid repository status (no commit defined)'
+                ));
             }
 
             return {
@@ -333,7 +338,11 @@ export function resolve(browser, extension, path, type, name) {
                 ]),
 
                 // Repository
-                repository
+                repository: {
+                    ...(module.repository || {}),
+
+                    ...repository
+                }
             };
         }))
         // Resolve travis status (for package modules)
@@ -385,6 +394,8 @@ export function resolve(browser, extension, path, type, name) {
 }
 
 export function resolveMany(path, browser, extension) {
+    Logger.info(`Resolving modules for "${browser.name}"`);
+
     // Resolve each module sequentially
     return runSequential(Reduce(extension.modules, (modules, names, type) => {
         modules.push(...Map(names, (name) => {
@@ -393,11 +404,17 @@ export function resolveMany(path, browser, extension) {
 
         return modules;
     }, [
-        { type: 'tool', name: 'neon-extension-build' }
+        { type: 'tool', name: 'build' }
     ]), ({ type, name }) =>
         resolve(browser, extension, path, type, name)
     ).then((modules) => {
-        return KeyBy(modules, 'name');
+        return KeyBy(modules, (module) => {
+            if(['destination', 'source'].indexOf(module.type) >= 0) {
+                return `${module.type}-${module.key}`;
+            }
+
+            return module.key;
+        });
     });
 }
 

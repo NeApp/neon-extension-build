@@ -33,9 +33,10 @@ export const InstallModules = Task.create({
 
             let file = lines[lines.length - 1];
 
-            if(file.indexOf('neon-extension-') !== 0) {
-                log.error(`[${module.name}] Invalid file: ${file}`);
-                return Promise.reject();
+            if(file.indexOf('radon-extension-') !== 0) {
+                return Promise.reject(new Error(
+                    `Invalid file ${file}`
+                ));
             }
 
             log.info(`[${module.name}] ${file}`);
@@ -51,8 +52,9 @@ export const InstallModules = Task.create({
 
         // Ensure all modules have been packed
         if(files.length < count) {
-            log.error(`Unable to pack ${count - files.length} module(s)`);
-            return Promise.reject();
+            return Promise.reject(new Error(
+                `Unable to pack ${count - files.length} module(s)`
+            ));
         }
 
         log.info('Installing package...');

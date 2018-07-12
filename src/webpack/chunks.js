@@ -102,7 +102,7 @@ function getModuleServices(browser, environment, module) {
     }
 
     // Retrieve framework module
-    let framework = browser.modules['neon-extension-framework'];
+    let framework = browser.modules['framework'];
 
     // Find module services
     let items = [];
@@ -165,7 +165,7 @@ function createModule(browser, environment, module) {
     return {
         [`Modules/${module.name}/Main`]: [
             ...browser.webpack.common,
-            ...getServices([browser.modules['neon-extension-core']], Services.Configuration),
+            ...getServices([browser.modules['core']], Services.Configuration),
             ...getModuleServices(browser, environment, module)
         ]
     };
@@ -227,7 +227,7 @@ export function createChunks(browser, environment) {
             ...browser.webpack.common,
             ...getServices(modules, Services.Configuration),
 
-            'neon-extension-core/Messaging'
+            '@radon-extension/core/Messaging'
         ],
 
         //
@@ -238,28 +238,28 @@ export function createChunks(browser, environment) {
             ...browser.webpack.common,
             ...getServices(modules, Services.Configuration),
 
-            'neon-extension-core/Services/App'
+            '@radon-extension/core/Services/App'
         ],
 
         'Background/Services/Callback': [
             ...browser.webpack.common,
             ...getServices(modules, Services.Configuration),
 
-            'neon-extension-core/Services/Callback'
+            '@radon-extension/core/Services/Callback'
         ],
 
         'Background/Services/ContentScript': [
             ...browser.webpack.common,
             ...getServices(modules, Services.Configuration),
 
-            'neon-extension-core/Services/ContentScript'
+            '@radon-extension/core/Services/ContentScript'
         ],
 
         'Background/Services/Library': [
             ...browser.webpack.common,
             ...getServices(modules, Services.Configuration),
 
-            'neon-extension-core/Services/Library'
+            '@radon-extension/core/Services/Library'
         ],
 
         'Background/Services/Migrate': [
@@ -267,7 +267,7 @@ export function createChunks(browser, environment) {
             ...getServices(modules, Services.Configuration),
             ...getServices(modules, Services.Migrate),
 
-            'neon-extension-core/Services/Migrate'
+            '@radon-extension/core/Services/Migrate'
         ],
 
         'Background/Services/Scrobble': [
@@ -275,7 +275,7 @@ export function createChunks(browser, environment) {
             ...getServices(modules, Services.Configuration),
             ...getServices(destinations, Services.Destination.Scrobble),
 
-            'neon-extension-core/Services/Scrobble'
+            '@radon-extension/core/Services/Scrobble'
         ],
 
         //
@@ -284,7 +284,7 @@ export function createChunks(browser, environment) {
 
         'Application': [
             // Ensure CSS Dependencies are bundled first
-            'neon-extension-core/App/App.Dependencies.scss',
+            '@radon-extension/core/App/App.Dependencies.scss',
 
             // Include common modules
             ...browser.webpack.common,
@@ -293,7 +293,7 @@ export function createChunks(browser, environment) {
             ...getServices(modules, Services.Configuration, { includeComponents: true }),
 
             // Bootstrap
-            'neon-extension-core/App'
+            '@radon-extension/core/App'
         ],
 
         //

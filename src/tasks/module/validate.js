@@ -77,7 +77,7 @@ export function validateDependencies(log, browser, packageModuleNode, module, mo
 export function validateDevelopmentDependencies(log, browser, build, module) {
     let valid = true;
 
-    // Ensure development dependencies match neon-extension-build
+    // Ensure development dependencies match radon-extension-build
     let incorrect = PickBy(module.package['devDependencies'], (current, name) => {
         let common = build.package['dependencies'][name];
 
@@ -113,7 +113,7 @@ export function validateModules(log, browser, environment, packageNode) {
     let valid = true;
 
     // Retrieve build module
-    let build = browser.modules['neon-extension-build'];
+    let build = browser.modules['build'];
 
     // Validate modules
     return runSequential(Values(browser.modules), (module) => {
@@ -139,8 +139,9 @@ export function validateModules(log, browser, environment, packageNode) {
         let packageModuleNode = packageNode.get(module.name);
 
         if(IsNil(packageModuleNode)) {
-            log.error(`[${module.name}] Unable to find module in package tree`);
-            return Promise.reject();
+            return Promise.reject(new Error(
+                'Unable to find module in package tree'
+            ));
         }
 
         // Ensure "package-lock.json" exists

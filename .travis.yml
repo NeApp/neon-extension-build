@@ -22,5 +22,5 @@ deploy:
   api_key:
     secure: xkTpLsm6qAopbeT2ZZOQQtzbPvnAY6TSbMr04S27Tr6vjoOyIMAO43+/eSHiMF5j3CQal/MQVbeEAfyLjAxArg/B/Z2cpQ1GlDfZVbRHGGrg/8cE5kRmbtRb843pOZdzCwa2166Q9MyUZ4gz08TMf4SEdEWT8MPAvQd/9MiVPrWPbp1JugI0+KW737efXVMUvNbKNICduDFHLV78800ojziWEo7pZmW6QSnWXuDL31cMeTjgqeYsfhB2jJtMvhvYb8ntqINPMoHHrzImfUxfxppsKfzdrD887DdeL2ZHdhHLD/DcXW8fVAoOIvscdmHqiOOsaPMEj71T0AW/aqlICG8DegWW5ri2roHlu/WPzLEu0HjsmOzN5y35DIa4mrZmonQ3ZNw4kB1FhZ0y//+UaF+wtcB0zruEvy3CI3qf63MnmVBcBggtyjBS1XfT10W6p5cV1NhDGWSecoKjCwAuoFr30TYgm3HVpJsYEXnGzOkmwCi8RTga6JR4zPjvhaJ1hTdI3uqcf/HaMe/nuWZxhijpXoZcm44vsHHxPGcJJ5/GNxbQ3PclDL3Yj1E71xB0t/YeTybvo72YmeIUEfXmiU+znEfCV8vfVk9YzQSRw0SCjQo0FldhEEncwqzrbEXnj5NpbseS/oanNlAZ/pV08oavT6kEMv6ZcSs/GPhR3D8=
   on:
-    repo: NeApp/neon-extension-build
+    repo: RadonApp/radon-extension-build
     tags: true

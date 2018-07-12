@@ -20,7 +20,8 @@ const ChromeBrowser = {
     name: 'chrome',
     title: 'Chrome',
 
-    package: 'neon-extension-chrome',
+    package: '@radon-extension/chrome',
+    repository: 'radon-extension-chrome',
 
     includeVersionName: true
 };
@@ -31,7 +32,8 @@ const FirefoxBrowser = {
     name: 'firefox',
     title: 'Firefox',
 
-    package: 'neon-extension-firefox'
+    package: '@radon-extension/firefox',
+    repository: 'radon-extension-firefox'
 };
 
 const OperaBrowser = {
@@ -40,7 +42,8 @@ const OperaBrowser = {
     name: 'opera',
     title: 'Opera',
 
-    package: 'neon-extension-opera',
+    package: '@radon-extension/opera',
+    repository: 'radon-extension-opera',
 
     includeVersionName: true
 };

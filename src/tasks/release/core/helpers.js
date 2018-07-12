@@ -4,11 +4,11 @@ import Values from 'lodash/values';
 
 export function getPackages(browser) {
     return [
-        browser.modules['neon-extension-build'],
+        browser.modules['build'],
 
         // Core
-        browser.modules['neon-extension-framework'],
-        browser.modules['neon-extension-core'],
+        browser.modules['framework'],
+        browser.modules['core'],
 
         // Plugins
         ...Values(PickBy(browser.modules, (module) => [

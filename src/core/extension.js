@@ -91,8 +91,8 @@ function parseExtensionManifest(name, data) {
             ...CloneDeep(data.modules),
 
             'core': [
-                'neon-extension-core',
-                'neon-extension-framework'
+                'core',
+                'framework'
             ],
 
             'packages': [
@@ -125,8 +125,8 @@ function readExtensionManifest(extension, path, channel = null) {
 
 function getExtensionManifest(extension, path) {
     return readExtensionManifest(extension, path).then(
-        (manifest) => parseExtensionManifest(extension.name, manifest),
-        () => parseExtensionManifest(extension.name, {})
+        (manifest) => parseExtensionManifest(extension.key, manifest),
+        () => parseExtensionManifest(extension.key, {})
     );
 }
 
@@ -158,7 +158,15 @@ function getBuildManifest(path) {
 }
 
 export function resolve(packageDir, browser) {
-    return Promise.resolve({ type: 'package', path: browser.path })
+    Logger.info(`Resolving extension for browser "${browser.name}"`);
+
+    let extension = {
+        key: browser.name,
+        type: 'package',
+        path: browser.path
+    };
+
+    return Promise.resolve(extension)
         // Resolve package details
         .then((extension) => readPackageDetails(browser.path).then((pkg) => {
             if(pkg.name !== browser.package) {
@@ -169,11 +177,7 @@ export function resolve(packageDir, browser) {
 
             return {
                 ...extension,
-
-                // Extension
-                ...Omit(pkg, [
-                    'repository'
-                ]),
+                ...pkg,
 
                 // Package
                 package: pkg
@@ -194,10 +198,6 @@ export function resolve(packageDir, browser) {
         })))
         // Resolve repository status
         .then((extension) => Promise.resolve().then(() => {
-            if(!IsNil(extension.repository)) {
-                return extension.repository;
-            }
-
             // Return repository status from the build manifest
             if(!IsNil(extension.build[browser.package])) {
                 if(!IsNil(extension.build[browser.package].repository)) {
@@ -224,11 +224,9 @@ export function resolve(packageDir, browser) {
             Logger.debug(`[${PadEnd(browser.package, 40)}] Repository: ${Util.inspect(repository)}`);
 
             if(IsNil(repository.commit) && !repository.dirty) {
-                Logger.error(Chalk.red(
-                    `[${PadEnd(browser.package, 40)}] Invalid repository status (no commit defined)`
+                return Promise.reject(new Error(
+                    'Invalid repository status (no commit defined)'
                 ));
-
-                return Promise.reject();
             }
 
             return {
@@ -244,7 +242,11 @@ export function resolve(packageDir, browser) {
                 ]),
 
                 // Repository
-                repository
+                repository: {
+                    ...(extension.repository || {}),
+
+                    ...repository
+                }
             };
         }))
         // Resolve travis status

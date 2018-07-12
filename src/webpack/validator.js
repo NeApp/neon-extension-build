@@ -103,7 +103,7 @@ export class Validator {
         }
 
         // Apply module dependency rules
-        if(dep.name.startsWith('neon-extension-') && !this._isModulePermitted(module, dep.name)) {
+        if(dep.name.startsWith('@radon-extension/') && !this._isModulePermitted(module, dep.name)) {
             Logger.error(`Dependency "${dep.name}" is not permitted for "${module.name}" (request: "${request}")`);
 
             this._error = true;
@@ -139,7 +139,7 @@ export class Validator {
     }
 
     validateDependency(dep, module) {
-        if(dep.name.indexOf('neon-extension-') === 0) {
+        if(dep.name.indexOf('@radon-extension/') === 0) {
             return this.validateModule(dep, module);
         }
 
@@ -246,7 +246,18 @@ export class Validator {
     }
 
     registerLink(browser, environment, source, target) {
-        if(Path.basename(source).indexOf('neon-extension-') === 0) {
+        let dep;
+
+        // Retrieve dependency name
+        try {
+            dep = this._parseDependency(source);
+        } catch(e) {
+            Logger.warn(`Unable to parse dependency: "${source}": ${e}`);
+            return;
+        }
+
+        // Ignore modules
+        if(dep.name.indexOf('@radon-extension/') === 0) {
             return;
         }
 
@@ -365,7 +376,7 @@ export class Validator {
 
         // Ensure dependencies have been matched
         for(let name in current) {
-            if(!current.hasOwnProperty(name) || name.startsWith('neon-extension-')) {
+            if(!current.hasOwnProperty(name) || name.startsWith('@radon-extension/')) {
                 continue;
             }
 
@@ -381,6 +392,41 @@ export class Validator {
                 Logger.warn(`${prefix} "${name}" is not required`);
             }
         }
+    }
+
+    _getDependencyName(path) {
+        path = Path.normalize(path);
+
+        let pos;
+
+        // Find module directory
+        pos = path.lastIndexOf('node_modules');
+
+        // No module directory found
+        if(pos < 0) {
+            return null;
+        }
+
+        let name = path.substring(pos + 13);
+
+        // Remove trailing path
+        pos = name.indexOf(Path.sep);
+
+        if(pos < 0) {
+            return name;
+        }
+
+        // Scoped package
+        if(name.indexOf('@') === 0) {
+            pos = name.indexOf(Path.sep, pos + 1);
+
+            if(pos < 0) {
+                return name;
+            }
+        }
+
+        // Return dependency name
+        return name.substring(0, pos).replace(/\\/g, '/');
     }
 
     _getSources(browser, environment, source) {
@@ -405,7 +451,7 @@ export class Validator {
             return true;
         }
 
-        return name === 'neon-extension-framework';
+        return name === '@radon-extension/framework';
     }
 
     _parseDependency(request) {
@@ -418,7 +464,14 @@ export class Validator {
             };
         }
 
-        let path = Path.dirname(request);
+        let path = request;
+
+        // Resolve directory
+        if(Filesystem.statSync(path).isFile()) {
+            path = Path.dirname(path);
+        }
+
+        // Resolve package path
         let packagePath;
 
         while(true) {
@@ -441,11 +494,18 @@ export class Validator {
         }
 
         // Retrieve package name
-        let name = Filesystem.readJsonSync(packagePath)['name'];
+        let packageName = Filesystem.readJsonSync(packagePath)['name'];
+
+        // Validate package name matches path
+        let name = this._getDependencyName(packagePath);
+
+        if(!IsNil(name) && name !== packageName) {
+            Logger.warn(`Package "${packageName}" doesn't match path "${name}"`);
+        }
 
         // Return package information
         return {
-            name,
+            name: packageName,
             path
         };
     }

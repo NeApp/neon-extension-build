@@ -16,11 +16,15 @@ function copyLocaleNamespaces(log, module, language, destinationPath) {
         return Promise.resolve();
     }
 
-    // Retrieve module name
-    let moduleName = module.name;
+    // Build module name
+    let moduleName;
 
-    if(moduleName === 'neon-extension-core') {
+    if(module.key === 'core') {
         moduleName = 'neon-extension';
+    } else if(['destination', 'source'].indexOf(module.type) >= 0) {
+        moduleName = `neon-extension-${module.type}-${module.key}`;
+    } else {
+        moduleName = `neon-extension-${module.key}`;
     }
 
     // Copy locale namespaces to the build directory

@@ -5,62 +5,62 @@ describe('Package', () => {
     describe('updatePackage', () => {
         it('should update dependencies', () => {
             expect(updatePackage({
-                name: 'neon-extension-chrome',
+                name: '@radon-extension/chrome',
 
                 dependencies: {
-                    'neon-extension-core': '1.9.0',
-                    'neon-extension-framework': '1.9.0',
-                    'neon-extension-destination-lastfm': '1.9.0',
-                    'neon-extension-destination-librefm': '1.9.0'
+                    '@radon-extension/core': '1.9.0',
+                    '@radon-extension/framework': '1.9.0',
+                    '@radon-extension/plugin-lastfm': '1.9.0',
+                    '@radon-extension/plugin-librefm': '1.9.0'
                 }
             }, {
-                'neon-extension-framework': {
-                    from: 'neon-extension-framework@NeApp/neon-extension-framework#alpha',
-                    version: 'NeApp/neon-extension-framework#alpha'
+                '@radon-extension/framework': {
+                    from: '@radon-extension/framework@RadonApp/radon-extension-framework#alpha',
+                    version: 'RadonApp/radon-extension-framework#alpha'
                 },
 
-                'neon-extension-destination-lastfm': '2.0.0'
+                '@radon-extension/plugin-lastfm': '2.0.0'
             })).toEqual({
-                name: 'neon-extension-chrome',
+                name: '@radon-extension/chrome',
 
                 dependencies: {
-                    'neon-extension-core': '1.9.0',
-                    'neon-extension-framework': 'NeApp/neon-extension-framework#alpha',
-                    'neon-extension-destination-lastfm': '2.0.0',
-                    'neon-extension-destination-librefm': '1.9.0'
+                    '@radon-extension/core': '1.9.0',
+                    '@radon-extension/framework': 'RadonApp/radon-extension-framework#alpha',
+                    '@radon-extension/plugin-lastfm': '2.0.0',
+                    '@radon-extension/plugin-librefm': '1.9.0'
                 }
             });
         });
 
         it('should update peer dependencies', () => {
             expect(updatePackage({
-                name: 'neon-extension-chrome',
+                name: '@radon-extension/chrome',
 
                 dependencies: {
                     'lodash': '^4.17.5'
                 },
 
                 peerDependencies: {
-                    'neon-extension-core': '1.9.0',
-                    'neon-extension-framework': '1.9.0',
-                    'neon-extension-destination-lastfm': '1.9.0',
-                    'neon-extension-destination-librefm': '1.9.0'
+                    '@radon-extension/core': '1.9.0',
+                    '@radon-extension/framework': '1.9.0',
+                    '@radon-extension/plugin-lastfm': '1.9.0',
+                    '@radon-extension/plugin-librefm': '1.9.0'
                 }
             }, {
-                'neon-extension-framework': '2.0.0',
-                'neon-extension-destination-lastfm': '2.0.0'
+                '@radon-extension/framework': '2.0.0',
+                '@radon-extension/plugin-lastfm': '2.0.0'
             })).toEqual({
-                name: 'neon-extension-chrome',
+                name: '@radon-extension/chrome',
 
                 dependencies: {
                     'lodash': '^4.17.5'
                 },
 
                 peerDependencies: {
-                    'neon-extension-core': '1.9.0',
-                    'neon-extension-framework': '2.0.0',
-                    'neon-extension-destination-lastfm': '2.0.0',
-                    'neon-extension-destination-librefm': '1.9.0'
+                    '@radon-extension/core': '1.9.0',
+                    '@radon-extension/framework': '2.0.0',
+                    '@radon-extension/plugin-lastfm': '2.0.0',
+                    '@radon-extension/plugin-librefm': '1.9.0'
                 }
             });
         });
@@ -69,39 +69,39 @@ describe('Package', () => {
     describe('updatePackageLocks', () => {
         it('should remove "integrity" fields', () => {
             expect(updatePackageLocks({
-                name: 'neon-extension-chrome',
+                name: '@radon-extension/chrome',
                 version: '1.9.0',
 
                 dependencies: {
-                    'neon-extension-core': {
+                    '@radon-extension/core': {
                         version: '1.9.0',
                         integrity: 'test'
                     },
-                    'neon-extension-framework': {
+                    '@radon-extension/framework': {
                         version: '1.9.0'
                     },
-                    'neon-extension-destination-lastfm': {
+                    '@radon-extension/plugin-lastfm': {
                         version: '1.9.0'
                     },
-                    'neon-extension-destination-librefm': {
+                    '@radon-extension/plugin-librefm': {
                         version: '1.9.0'
                     }
                 }
             })).toEqual({
-                name: 'neon-extension-chrome',
+                name: '@radon-extension/chrome',
                 version: '1.9.0',
 
                 dependencies: {
-                    'neon-extension-core': {
+                    '@radon-extension/core': {
                         version: '1.9.0'
                     },
-                    'neon-extension-framework': {
+                    '@radon-extension/framework': {
                         version: '1.9.0'
                     },
-                    'neon-extension-destination-lastfm': {
+                    '@radon-extension/plugin-lastfm': {
                         version: '1.9.0'
                     },
-                    'neon-extension-destination-librefm': {
+                    '@radon-extension/plugin-librefm': {
                         version: '1.9.0'
                     }
                 }
@@ -110,41 +110,41 @@ describe('Package', () => {
 
         it('should update package "version"', () => {
             expect(updatePackageLocks({
-                name: 'neon-extension-chrome',
+                name: '@radon-extension/chrome',
                 version: '1.9.0',
 
                 dependencies: {
-                    'neon-extension-core': {
+                    '@radon-extension/core': {
                         version: '1.9.0'
                     },
-                    'neon-extension-framework': {
+                    '@radon-extension/framework': {
                         version: '1.9.0'
                     },
-                    'neon-extension-destination-lastfm': {
+                    '@radon-extension/plugin-lastfm': {
                         version: '1.9.0'
                     },
-                    'neon-extension-destination-librefm': {
+                    '@radon-extension/plugin-librefm': {
                         version: '1.9.0'
                     }
                 }
             }, {
-                'neon-extension-framework': '2.0.0',
-                'neon-extension-destination-lastfm': '2.0.0'
+                '@radon-extension/framework': '2.0.0',
+                '@radon-extension/plugin-lastfm': '2.0.0'
             })).toEqual({
-                name: 'neon-extension-chrome',
+                name: '@radon-extension/chrome',
                 version: '1.9.0',
 
                 dependencies: {
-                    'neon-extension-core': {
+                    '@radon-extension/core': {
                         version: '1.9.0'
                     },
-                    'neon-extension-framework': {
+                    '@radon-extension/framework': {
                         version: '2.0.0'
                     },
-                    'neon-extension-destination-lastfm': {
+                    '@radon-extension/plugin-lastfm': {
                         version: '2.0.0'
                     },
-                    'neon-extension-destination-librefm': {
+                    '@radon-extension/plugin-librefm': {
                         version: '1.9.0'
                     }
                 }
@@ -153,48 +153,48 @@ describe('Package', () => {
 
         it('should update package "from"', () => {
             expect(updatePackageLocks({
-                name: 'neon-extension-chrome',
+                name: '@radon-extension/chrome',
                 version: '1.9.0',
 
                 dependencies: {
-                    'neon-extension-core': {
+                    '@radon-extension/core': {
                         version: '1.9.0'
                     },
-                    'neon-extension-framework': {
-                        from: 'neon-extension-framework@NeApp/neon-extension-framework#alpha',
-                        version: 'NeApp/neon-extension-framework#alpha'
+                    '@radon-extension/framework': {
+                        from: '@radon-extension/framework@RadonApp/radon-extension-framework#alpha',
+                        version: 'RadonApp/radon-extension-framework#alpha'
                     },
-                    'neon-extension-destination-lastfm': {
-                        from: 'neon-extension-destination-lastfm@NeApp/neon-extension-destination-lastfm#alpha',
-                        version: 'NeApp/neon-extension-destination-lastfm#alpha'
+                    '@radon-extension/plugin-lastfm': {
+                        from: '@radon-extension/plugin-lastfm@RadonApp/radon-extension-plugin-lastfm#alpha',
+                        version: 'RadonApp/radon-extension-plugin-lastfm#alpha'
                     },
-                    'neon-extension-destination-librefm': {
+                    '@radon-extension/plugin-librefm': {
                         version: '1.9.0'
                     }
                 }
             }, {
-                'neon-extension-framework': {
-                    from: 'neon-extension-framework@NeApp/neon-extension-framework#beta',
-                    version: 'NeApp/neon-extension-framework#beta'
+                '@radon-extension/framework': {
+                    from: '@radon-extension/framework@RadonApp/radon-extension-framework#beta',
+                    version: 'RadonApp/radon-extension-framework#beta'
                 },
 
-                'neon-extension-destination-lastfm': '2.0.0'
+                '@radon-extension/plugin-lastfm': '2.0.0'
             })).toEqual({
-                name: 'neon-extension-chrome',
+                name: '@radon-extension/chrome',
                 version: '1.9.0',
 
                 dependencies: {
-                    'neon-extension-core': {
+                    '@radon-extension/core': {
                         version: '1.9.0'
                     },
-                    'neon-extension-framework': {
-                        from: 'neon-extension-framework@NeApp/neon-extension-framework#beta',
-                        version: 'NeApp/neon-extension-framework#beta'
+                    '@radon-extension/framework': {
+                        from: '@radon-extension/framework@RadonApp/radon-extension-framework#beta',
+                        version: 'RadonApp/radon-extension-framework#beta'
                     },
-                    'neon-extension-destination-lastfm': {
+                    '@radon-extension/plugin-lastfm': {
                         version: '2.0.0'
                     },
-                    'neon-extension-destination-librefm': {
+                    '@radon-extension/plugin-librefm': {
                         version: '1.9.0'
                     }
                 }
