@@ -54,9 +54,9 @@ function getTravisStatus(log, module, ref, options) {
         createdAfter: null,
         sha: null,
 
-        delay: 5 * 1000,
-        retryAttempts: 6,
-        retryInterval: 10 * 1000,
+        delay: 30 * 1000,
+        retryAttempts: 20,
+        retryInterval: 15 * 1000,
 
         ...(options || {})
     };
