@@ -47,5 +47,5 @@ describe('core/module', () => {
                 '*://www.amazon.com/gp/video/storefront/*'
             )).toBeTruthy();
         });
-    })
+    });
 });

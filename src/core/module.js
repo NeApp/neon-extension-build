@@ -109,7 +109,7 @@ export function createOriginRegExp(pattern) {
     pattern = pattern.replace(/[\-\[\]\/\{\}\(\)\+\?\.\\\^\$\|]/g, '\\$&');
 
     // Replace `*` with `.*`
-    pattern = pattern.replace(/\*/g, `.*`);
+    pattern = pattern.replace(/\*/g, '.*');
 
     // Create regular expression
     return new RegExp(pattern);
