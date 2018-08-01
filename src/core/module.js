@@ -1,5 +1,6 @@
 import Chalk from 'chalk';
 import Filesystem from 'fs-extra';
+import Find from 'lodash/find';
 import ForEach from 'lodash/forEach';
 import IsNil from 'lodash/isNil';
 import IsPlainObject from 'lodash/isPlainObject';
@@ -12,6 +13,7 @@ import PadEnd from 'lodash/padEnd';
 import Path from 'path';
 import Pick from 'lodash/pick';
 import Reduce from 'lodash/reduce';
+import Remove from 'lodash/remove';
 import Uniq from 'lodash/uniq';
 import Util from 'util';
 
@@ -102,6 +104,53 @@ function getContentScriptOrigins(contentScripts) {
     }, []);
 }
 
+export function createOriginRegExp(pattern) {
+    // Escape regular expression tokens (except `*`)
+    pattern = pattern.replace(/[\-\[\]\/\{\}\(\)\+\?\.\\\^\$\|]/g, '\\$&');
+
+    // Replace `*` with `.*`
+    pattern = pattern.replace(/\*/g, `.*`);
+
+    // Create regular expression
+    return new RegExp(pattern);
+}
+
+export function isOriginMatch(pattern, subject) {
+    if(pattern === subject) {
+        return true;
+    }
+
+    // Create regular expression from `pattern`
+    let re;
+
+    try {
+        re = createOriginRegExp(pattern);
+    } catch(e) {
+        throw new Error(`Unable to parse origin: ${pattern}`);
+    }
+
+    // Check if regular expression matches `subject`
+    return !IsNil(re.exec(subject));
+}
+
+export function getUniqueOrigins(origins) {
+    // Remove duplicate origins
+    origins = Uniq(origins);
+
+    // Remove matching origins
+    Remove(origins, (subject) =>
+        !IsNil(Find(origins, (pattern) => {
+            if(pattern === subject) {
+                return false;
+            }
+
+            return isOriginMatch(pattern, subject);
+        }))
+    );
+
+    return origins;
+}
+
 function parseModuleManifest(extension, data) {
     let manifest = Merge({
         'title': data.name || null,
@@ -128,8 +177,8 @@ function parseModuleManifest(extension, data) {
         manifest['origins'] = manifest['origins'].concat(getContentScriptOrigins(manifest['content_scripts']));
     }
 
-    // Remove duplicate origins
-    manifest.origins = Uniq(manifest.origins);
+    // Retrieve unique origins
+    manifest.origins = getUniqueOrigins(manifest.origins);
 
     // Remove duplicate permissions
     manifest.permissions = Uniq(manifest.permissions);
