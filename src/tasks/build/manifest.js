@@ -51,6 +51,7 @@ function getExtensionManifest(browser) {
         // Include extension manifest properties
         ...Pick(browser.extension.manifest, [
             'applications',
+            'key',
 
             'description',
             'icons',
