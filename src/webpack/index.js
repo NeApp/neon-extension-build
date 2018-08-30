@@ -69,9 +69,11 @@ function encodeExtensionManifest(browser) {
 
 function encodeModuleManifests(modules) {
     let manifests = MapKeys(MapValues(modules || {}, (module) => Pick(module, [
+        'id',
+        'key',
+
         'name',
         'type',
-        'key',
 
         'title',
         'version',
@@ -89,9 +91,13 @@ function encodeModuleManifests(modules) {
         // Optional Permissions
         'optional_origins',
         'optional_permissions'
-    ])), (manifest) =>
-        `neon-extension-${manifest.type}-${manifest.key}`
-    );
+    ])), (manifest) => {
+        if(['core', 'package', 'tool'].indexOf(manifest.type) < 0) {
+            return `neon-extension-${manifest.type}-${manifest.id}`;
+        }
+
+        return `neon-extension-${manifest.id}`;
+    });
 
     // Sort manifests by key
     return Pick(manifests, Object.keys(manifests).sort());
@@ -356,16 +362,6 @@ export function createConfiguration(browser, environment) {
                 {
                     test: /\.js$/,
                     include: [
-                        Path.resolve(browser.path, 'node_modules/foundation-sites')
-                    ],
-
-                    use: [
-                        'imports-loader?this=>window'
-                    ]
-                },
-                {
-                    test: /\.js$/,
-                    include: [
                         Filesystem.realpathSync(Path.resolve(browser.path, 'node_modules/foundation-sites')),
                         Filesystem.realpathSync(Path.resolve(browser.path, 'node_modules/lodash-es')),
                         Filesystem.realpathSync(Path.resolve(browser.path, 'node_modules/wes')),
@@ -408,7 +404,9 @@ export function createConfiguration(browser, environment) {
                                 loader: 'sass-loader',
                                 options: {
                                     includePaths: [
-                                        Path.resolve(browser.path, 'node_modules/foundation-sites/scss')
+                                        Filesystem.realpathSync(Path.resolve(
+                                            browser.path, 'node_modules/foundation-sites/scss'
+                                        ))
                                     ]
                                 }
                             }
@@ -450,26 +448,26 @@ export function createConfiguration(browser, environment) {
             }),
 
             new Webpack.optimize.CommonsChunkPlugin({
-                name: 'Modules/Common',
+                name: 'Plugins/Common',
 
                 chunks: [].concat(...Map(browser.modules, (module) => {
                     let chunks = [];
 
                     // Include main module
                     if(['source'].indexOf(module.type) >= 0) {
-                        chunks.push(`Modules/${module.name}/Main`);
+                        chunks.push(`Plugins/${module.id}/Main`);
                     }
 
                     // Include additional modules
                     ForEach(PickBy(module.webpack.modules, ({entry}) => !entry), (_, name) => {
-                        chunks.push(`Modules/${module.name}/${name}`);
+                        chunks.push(`Plugins/${module.id}/${name}`);
                     });
 
                     return chunks;
                 })),
 
                 minChunks: (module, count) => shouldExtractModule(browser, environment, module, count, {
-                    chunk: 'Modules/Common',
+                    chunk: 'Plugins/Common',
 
                     shared: true,
                     types: ['browser', 'core', 'framework']
@@ -481,7 +479,7 @@ export function createConfiguration(browser, environment) {
 
                 chunks: [
                     'Background/Common',
-                    'Modules/Common',
+                    'Plugins/Common',
 
                     'Application'
                 ],

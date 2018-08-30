@@ -245,7 +245,7 @@ function overlayModuleManifest(module, browser) {
     }));
 }
 
-export function resolve(browser, extension, path, type, name) {
+export function resolve(browser, extension, path, type, id) {
     let moduleType = ModuleType[type];
 
     if(IsNil(moduleType)) {
@@ -254,23 +254,25 @@ export function resolve(browser, extension, path, type, name) {
         ));
     }
 
-    // Build key
-    let key = name;
+    // Build `key`
+    let key = id;
 
     if(!IsNil(moduleType.prefix)) {
         key = `${moduleType.prefix}-${key}`;
     }
 
-    // Build repository name
-    let repository = `radon-extension-${key}`;
+    // Build package name
+    let packageName = `radon-extension-${key}`;
 
     // Resolve module metadata
-    Logger.info(`Resolving module "${name}" (${repository})`);
+    Logger.info(`Resolving module "${key}" (${packageName})`);
 
     let module = {
-        key: name,
+        id,
+        key,
+
         type: moduleType.name,
-        path: getModulePath(path, repository, moduleType)
+        path: getModulePath(path, packageName, moduleType)
     };
 
     return Promise.resolve(module)
@@ -317,7 +319,7 @@ export function resolve(browser, extension, path, type, name) {
                 latestTag: null
             }));
         }).then((repository) => {
-            Logger.debug(`[${PadEnd(name, 40)}] Repository: ${Util.inspect(repository)}`);
+            Logger.debug(`[${PadEnd(key, 40)}] Repository: ${Util.inspect(repository)}`);
 
             if(IsNil(repository.commit) && !repository.dirty) {
                 return Promise.reject(new Error(
@@ -408,13 +410,7 @@ export function resolveMany(path, browser, extension) {
     ]), ({ type, name }) =>
         resolve(browser, extension, path, type, name)
     ).then((modules) => {
-        return KeyBy(modules, (module) => {
-            if(['destination', 'source'].indexOf(module.type) >= 0) {
-                return `${module.type}-${module.key}`;
-            }
-
-            return module.key;
-        });
+        return KeyBy(modules, 'key');
     });
 }
 

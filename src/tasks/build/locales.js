@@ -16,19 +16,8 @@ function copyLocaleNamespaces(log, module, language, destinationPath) {
         return Promise.resolve();
     }
 
-    // Build module name
-    let moduleName;
-
-    if(module.key === 'core') {
-        moduleName = 'neon-extension';
-    } else if(['destination', 'source'].indexOf(module.type) >= 0) {
-        moduleName = `neon-extension-${module.type}-${module.key}`;
-    } else {
-        moduleName = `neon-extension-${module.key}`;
-    }
-
     // Copy locale namespaces to the build directory
-    return Copy('**/*.json', localePath, `${destinationPath}/${language}/${moduleName}`).then((files) => {
+    return Copy('**/*.json', localePath, `${destinationPath}/${language}/${module.key}`).then((files) => {
         log.info(Chalk.green(
             `[${PadEnd(module.name, 40)}](${language}) Copied ${files.length} namespace(s)`
         ));

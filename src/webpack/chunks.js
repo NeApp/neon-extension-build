@@ -163,7 +163,7 @@ function getModuleServices(browser, environment, module) {
 
 function createModule(browser, environment, module) {
     return {
-        [`Modules/${module.name}/Main`]: [
+        [`Plugins/${module.id}/Main`]: [
             ...browser.webpack.common,
             ...getServices([browser.modules['core']], Services.Configuration),
             ...getModuleServices(browser, environment, module)
@@ -203,7 +203,7 @@ function createModuleChunks(browser, module) {
         }
 
         // Create module
-        result[`Modules/${module.name}/${name}`] = [
+        result[`Plugins/${module.id}/${name}`] = [
             ...browser.webpack.common,
 
             // Include modules (with module prefix)

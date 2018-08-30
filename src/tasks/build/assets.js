@@ -34,8 +34,8 @@ export const Assets = Task.create({
         }
 
         // Add module name suffix to output directory
-        if(['destination', 'source'].indexOf(module.type) >= 0) {
-            dest = Path.join(dest, `Modules/neon-extension-${module.type}-${module.key}`);
+        if(['core', 'package', 'tool'].indexOf(module.type) < 0) {
+            dest = Path.join(dest, `Plugins/${module.id}`);
         }
 
         // Copy module assets to build directory

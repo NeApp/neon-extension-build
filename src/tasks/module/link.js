@@ -23,15 +23,17 @@ export const LinkModules = Task.create({
             ...Keys(module.package['dependencies']),
             ...Keys(module.package['peerDependencies'])
         ]), (name) => {
-            if(name.indexOf('radon-extension-') !== 0) {
+            if(name.indexOf('@radon-extension/') !== 0) {
                 return Promise.resolve();
             }
 
+            let key = name.replace('@radon-extension/', '');
+
             // Retrieve dependency
-            let dependency = browser.modules[name];
+            let dependency = browser.modules[key];
 
             if(IsNil(dependency)) {
-                return Promise.reject(new Error(`Unknown module: ${name}`));
+                return Promise.reject(new Error(`Unknown module: ${name} (${key})`));
             }
 
             log.info(`[${module.name}] "${name}" -> "${dependency.path}"`);
