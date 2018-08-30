@@ -4,7 +4,7 @@ export function resolveOne(items, target) {
 
         function next() {
             if(position >= items.length) {
-                resolve(null);
+                reject();
                 return;
             }
 
