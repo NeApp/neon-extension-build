@@ -8,7 +8,6 @@ import KeyBy from 'lodash/keyBy';
 import Map from 'lodash/map';
 import MapValues from 'lodash/mapValues';
 import Merge from 'lodash/merge';
-import Omit from 'lodash/omit';
 import PadEnd from 'lodash/padEnd';
 import Path from 'path';
 import Pick from 'lodash/pick';
