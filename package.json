@@ -67,7 +67,8 @@
     "yazl": "^2.4.2"
   },
   "bin": {
-    "neb": "./lib/index.js"
+    "neb": "./lib/index.js",
+    "reb": "./lib/index.js"
   },
   "scripts": {
     "build": "babel src --out-dir lib",
