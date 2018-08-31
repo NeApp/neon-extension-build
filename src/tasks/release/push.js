@@ -16,8 +16,8 @@ import {runSequential} from '../../core/helpers/promise';
 
 
 const Remotes = [
-    'bitbucket/neapp',
-    'neapp'
+    'bitbucket',
+    'origin'
 ];
 
 const travis = new Travis({
@@ -230,7 +230,7 @@ function pushBranch(log, module, remotes, tag, branch, options) {
                 return Promise.resolve();
             }
 
-            if(remote === 'neapp') {
+            if(remote === 'origin') {
                 startedAt = Date.now();
             }
 
@@ -246,7 +246,7 @@ function pushBranch(log, module, remotes, tag, branch, options) {
             return module.repository.push(remote, `+${tag}~0:refs/heads/${branch}`);
         });
     }).then(() => {
-        if(IsNil(startedAt) || remotes.indexOf('neapp') < 0) {
+        if(IsNil(startedAt) || remotes.indexOf('origin') < 0) {
             return Promise.resolve();
         }
 
@@ -287,7 +287,7 @@ function pushTag(log, module, remotes, tag, options) {
         // Push tag to remote
         return module.repository.push(remote, `refs/tags/${tag}`);
     }).then(() => {
-        if(remotes.indexOf('neapp') < 0) {
+        if(remotes.indexOf('origin') < 0) {
             return Promise.resolve();
         }
 
