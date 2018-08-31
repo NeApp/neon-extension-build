@@ -149,7 +149,7 @@ export function getBrowserModules(browser) {
 
 export function getPackageModules(pkg) {
     if(pkg.name.indexOf('@radon-extension/') !== 0) {
-        return Promise.reject(new Error(`Invalid module: ${pkg.name}`));
+        throw new Error(`Invalid module: ${pkg.name}`);
     }
 
     return orderModules(Filter([
