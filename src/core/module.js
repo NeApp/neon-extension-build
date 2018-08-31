@@ -297,7 +297,7 @@ export function resolve(browser, extension, path, type, id) {
             }
 
             // Find repository
-            let path = Path.join(extension.path, '.modules', module.name);
+            let path = Path.join(extension.path, '.modules', `radon-extension-${key}`);
 
             if(!Filesystem.existsSync(path)) {
                 path = module.path;
