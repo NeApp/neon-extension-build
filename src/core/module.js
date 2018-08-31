@@ -56,11 +56,11 @@ const ModuleType = {
     }
 };
 
-function getModulePath(basePath, repository, type) {
+function getModulePath(basePath, type, key) {
     let path;
 
     // Find development module type directory
-    path = Path.resolve(basePath, (type.directory || '') + repository);
+    path = Path.resolve(basePath, `${(type.directory || '')}radon-extension-${key}`);
 
     if(Filesystem.existsSync(path)) {
         return path;
@@ -72,13 +72,13 @@ function getModulePath(basePath, repository, type) {
     }
 
     // Find installed module
-    path = Path.resolve(basePath, 'node_modules', repository);
+    path = Path.resolve(basePath, `node_modules/@radon-extension/${key}`);
 
     if(Filesystem.existsSync(path)) {
         return path;
     }
 
-    throw new Error(`Unable to find "${repository}" module`);
+    throw new Error(`Unable to find "${key}" module`);
 }
 
 function readContributors(path) {
@@ -260,18 +260,15 @@ export function resolve(browser, extension, path, type, id) {
         key = `${moduleType.prefix}-${key}`;
     }
 
-    // Build package name
-    let packageName = `radon-extension-${key}`;
-
     // Resolve module metadata
-    Logger.info(`Resolving module "${key}" (${packageName})`);
+    Logger.info(`Resolving module "${key}" (type: "${moduleType.name}")`);
 
     let module = {
         id,
         key,
 
         type: moduleType.name,
-        path: getModulePath(path, packageName, moduleType)
+        path: getModulePath(path, moduleType, key)
     };
 
     return Promise.resolve(module)
