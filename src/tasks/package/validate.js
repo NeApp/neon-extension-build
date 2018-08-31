@@ -14,9 +14,9 @@ import {getDependencyTree} from '../../core/package';
 const Logger = Vorpal.logger;
 
 const IgnoredPackages = [
-    /^radon-extension-([\w-]+)$/,
+    /^.*\/fsevents$/,
 
-    /^(radon-extension-build\/)?travis-ci\/underscore.string$/
+    /^(@radon-extension\/build\/)?travis-ci\/underscore.string$/
 ];
 
 export function isIgnoredPackage(path) {
@@ -110,9 +110,17 @@ export function validateDependencies(packages, tree, prefix = null) {
             success = false;
         }
 
-        // Ensure dependency matches
-        if(pkg.version !== dependency.version) {
-            logError(`[${path}] found ${pkg.version}, expected ${dependency.version}`, ignored);
+        // Ensure "from" field is valid
+        if(pkg.from.indexOf(name) !== 0) {
+            logError(`[${path}] "from" field isn\'t valid`);
+            success = false;
+        }
+
+        // Ensure dependency version matches
+        let version = pkg.from.substring(name.length + 1);
+
+        if(version !== dependency.version) {
+            logError(`[${path}] found ${version}, expected ${dependency.version}`, ignored);
             success = false;
         }
 
