@@ -54,8 +54,11 @@ export function test(target) {
         return runSequential(modules, (name) => {
             let prefix = `[${PadEnd(name, 40)}]`;
 
+            // Build repository name
+            let repository = name.replace('@radon-extension/', 'radon-extension-');
+
             // Test module
-            return testModule(Path.join(target, '.modules', name), prefix).catch((err) => {
+            return testModule(Path.join(target, '.modules', repository), prefix).catch((err) => {
                 Vorpal.logger.error(`${prefix} ${Chalk.red(`Error (code: ${err.code || null})`)}`);
 
                 // Mark as failed

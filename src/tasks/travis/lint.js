@@ -54,8 +54,11 @@ export function lint(target) {
         return runSequential(modules, (name) => {
             let prefix = `[${PadEnd(name, 40)}]`;
 
+            // Build repository name
+            let repository = name.replace('@radon-extension/', 'radon-extension-');
+
             // Lint module
-            return lintModule(Path.join(target, '.modules', name), prefix).catch((err) => {
+            return lintModule(Path.join(target, '.modules', repository), prefix).catch((err) => {
                 Vorpal.logger.error(`${prefix} ${Chalk.red((err && err.stack) ? err.stack : err)}`);
 
                 // Mark as failed

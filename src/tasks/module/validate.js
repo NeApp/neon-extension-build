@@ -125,7 +125,7 @@ export function validateModules(log, browser, environment, packageNode) {
 
         // Use module source in production environments (if available)
         if(environment.name === 'production') {
-            let modulePath = Path.join(browser.extension.path, '.modules', module.name);
+            let modulePath = Path.join(browser.extension.path, '.modules', `radon-extension-${module.key}`);
 
             if(!Filesystem.existsSync(modulePath)) {
                 log.info(`[${module.name}] Skipped (module source not available)`);
