@@ -17,7 +17,7 @@ function createDescriptor(browser) {
             'licenses': ['GPL-3.0'],
 
             'subject': 'radon',
-            'repo': 'radon-extension',
+            'repo': 'extension',
 
             'vcs_url': `${browser.extension.repository.url}.git`
         },
