@@ -8,13 +8,15 @@ describe('Tasks', () => {
                 expect(getModuleVersions({
                     modules: {
                         'framework': {
+                            name: '@radon-extension/framework',
+
                             repository: {
                                 tag: 'v1.9.0'
                             }
                         }
                     }
                 })).toEqual({
-                    'framework': '1.9.0'
+                    '@radon-extension/framework': '1.9.0'
                 });
             });
 
@@ -32,7 +34,7 @@ describe('Tasks', () => {
                         }
                     }
                 })).toEqual({
-                    'framework': {
+                    '@radon-extension/framework': {
                         from: '@radon-extension/framework@RadonApp/radon-extension-framework#abc123',
                         version: 'RadonApp/radon-extension-framework#abc123'
                     }
