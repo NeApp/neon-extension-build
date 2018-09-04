@@ -13,7 +13,7 @@ function createDescriptor(browser) {
 
     return Promise.resolve({
         'package': {
-            'name': browser.extension.package.name,
+            'name': browser.repository,
             'licenses': ['GPL-3.0'],
 
             'subject': 'radon',
