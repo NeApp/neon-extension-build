@@ -14,7 +14,9 @@ import {writePackage, writePackageLocks} from '../../core/package';
 const Pattern = '{Assets/**/*,*.json,*.md,.*}';
 
 export function getModuleVersions(browser) {
-    return MapValues(browser.modules, (module) => {
+    return MapValues(MapKeys(browser.modules, (module) =>
+        module.name
+    ), (module) => {
         if(!IsNil(module.repository.tag)) {
             let tag = module.repository.tag;
 
@@ -55,15 +57,15 @@ function writeBuildDetails(browser, environment) {
     let path = Path.join(environment.output.source, 'build.json');
 
     // Write build details
-    Json.write(path, MapKeys(MapValues(browser.modules, (module) => {
+    Json.write(path, MapValues(MapKeys(browser.modules, (module) =>
+        module.name
+    ), (module) => {
         if(module.type === 'package') {
             return Pick(module, ['repository', 'travis']);
         }
 
         return Pick(module, ['repository']);
-    }), (module) =>
-        module.name
-    ), {
+    }), {
         spaces: 2
     });
 }
