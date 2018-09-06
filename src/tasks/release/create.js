@@ -191,6 +191,8 @@ function updatePackages(log, browser, version, options) {
         }
 
         function formatVersion(version, name) {
+            name = name.replace('@radon-extension/', 'radon-extension-');
+
             if(module.type === 'package') {
                 return `file:${name}-${version}.tgz`;
             }
