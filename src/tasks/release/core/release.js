@@ -1,6 +1,7 @@
 import Chalk from 'chalk';
 import ChildProcess from 'child_process';
 import Filesystem from 'fs-extra';
+import Find from 'lodash/find';
 import IsNil from 'lodash/isNil';
 import Path from 'path';
 import Remove from 'lodash/remove';
@@ -156,11 +157,24 @@ export function updatePackageRelease(log, extension, repository, modules, tag, o
     }
 
     // Retrieve tag details
-    return GithubApi.repos.getReleaseByTag({
-        owner: 'RadonApp',
-        repo: extension.name,
-        tag
-    }).then(({data}) => {
+    return GithubApi.repos.getReleases({
+        'owner': 'RadonApp',
+        'repo': `radon-extension-${extension.key}`,
+
+        'per_page': 5
+    }).then(({data: releases}) => {
+        let release = Find(releases, (release) =>
+            release.tag_name === tag
+        );
+
+        if(IsNil(release)) {
+            return Promise.reject(new Error(`Unable to find "${tag}" release`));
+        }
+
+        if(!release.draft) {
+            return Promise.reject(new Error(`Release "${tag}" has already been published`));
+        }
+
         // Retrieve tag message
         return repository.tag(['-l', '--format="%(contents)"', tag])
             // Extract release notes from tag message
@@ -181,10 +195,9 @@ export function updatePackageRelease(log, extension, repository, modules, tag, o
             .then((notes) => openEditor(extension, notes))
             // Update release notes
             .then((notes) => GithubApi.repos.editRelease({
-                'id': data.id,
-
                 'owner': 'RadonApp',
                 'repo': `radon-extension-${extension.key}`,
+                'id': release.id,
 
                 'tag_name': tag,
                 'prerelease': !IsNil(SemanticVersion.prerelease(tag)),
