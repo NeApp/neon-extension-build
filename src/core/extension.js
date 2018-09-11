@@ -186,7 +186,10 @@ export function resolve(packageDir, browser) {
         // Resolve extension manifest
         .then((extension) => getExtensionManifest(extension, browser.path).then((manifest) => ({
             ...extension,
-            ...manifest,
+
+            ...Omit(manifest, [
+                'key'
+            ]),
 
             manifest
         })))
@@ -310,6 +313,7 @@ export function resolve(packageDir, browser) {
 
             // Extension
             ...Omit(manifest, [
+                'key',
                 'modules'
             ]),
 
