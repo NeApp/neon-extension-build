@@ -32,7 +32,7 @@ function extractReleaseNotes(message) {
 function getReleaseNotes(module, tag) {
     return GithubApi.repos.getReleaseByTag({
         owner: 'RadonApp',
-        repo: module.name,
+        repo: `radon-extension-${module.key}`,
         tag
     }).then(({data}) => {
         if(IsNil(data.body)) {
@@ -48,7 +48,7 @@ function getReleaseNotes(module, tag) {
 
         // Build release notes
         return (
-            `### [${module.name}](https://github.com/RadonApp/${module.name}/releases/tag/${tag})\n\n` +
+            `### [${module.name}](https://github.com/RadonApp/radon-extension-${module.key}/releases/tag/${tag})\n\n` +
             `${body}`
         );
     }, () => {
@@ -103,14 +103,14 @@ export function createRelease(log, module, repository, tag, options) {
 
     // Resolve immediately for dry runs
     if(options.dryRun) {
-        log.info(`Creating release "${tag}" on "RadonApp/${module.name}" (skipped, dry run)`);
+        log.info(`Creating release "${tag}" on "RadonApp/radon-extension-${module.key}" (skipped, dry run)`);
         return Promise.resolve();
     }
 
     // Retrieve tag details
     return GithubApi.repos.getReleaseByTag({
         owner: 'RadonApp',
-        repo: module.name,
+        repo: `radon-extension-${module.key}`,
         tag
     }).catch(() => null).then((result) => {
         if(!IsNil(result)) {
@@ -129,7 +129,7 @@ export function createRelease(log, module, repository, tag, options) {
             // Create release
             .then((notes) => GithubApi.repos.createRelease({
                 'owner': 'RadonApp',
-                'repo': module.name,
+                'repo': `radon-extension-${module.key}`,
 
                 'tag_name': tag,
                 'prerelease': !IsNil(SemanticVersion.prerelease(tag)),
@@ -151,7 +151,7 @@ export function updatePackageRelease(log, extension, repository, modules, tag, o
 
     // Resolve immediately for dry runs
     if(options.dryRun) {
-        log.info(`Updating package release "${tag}" on "RadonApp/${extension.name}" (skipped, dry run)`);
+        log.info(`Updating package release "${tag}" on "RadonApp/radon-extension-${extension.key}" (skipped, dry run)`);
         return Promise.resolve();
     }
 
@@ -184,7 +184,7 @@ export function updatePackageRelease(log, extension, repository, modules, tag, o
                 'id': data.id,
 
                 'owner': 'RadonApp',
-                'repo': extension.name,
+                'repo': `radon-extension-${extension.key}`,
 
                 'tag_name': tag,
                 'prerelease': !IsNil(SemanticVersion.prerelease(tag)),
@@ -203,12 +203,13 @@ export function updatePackageRelease(log, extension, repository, modules, tag, o
             log.debug(`[${extension.name}] Unable to parse error details: ${e}`);
 
             return Promise.reject(new Error(
-                `Unable to retrieve release notes for "${tag}" on "${extension.name}"`
+                `Unable to retrieve release notes for "${tag}" on "RadonApp/radon-extension-${extension.key}"`
             ));
         }
 
         return Promise.reject(new Error(
-            `Unable to retrieve release notes for "${tag}" on "${extension.name}": ${details.message}`
+            `Unable to retrieve release notes for "${tag}" on "RadonApp/radon-extension-${extension.key}"` +
+            `: ${details.message}`
         ));
     });
 }

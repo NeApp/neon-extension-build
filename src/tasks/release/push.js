@@ -73,12 +73,15 @@ function getTravisStatus(log, module, ref, options) {
                 return;
             }
 
-            log.debug(`[${module.name}] (GitHub) Fetching the status of "${ref}"...`);
+            log.debug(
+                `[${module.name}] (GitHub) Fetching the status of "${ref}" ` +
+                `in "RadonApp/radon-extension-${module.key}"...`
+            );
 
             // Retrieve combined status for `ref`
             GithubApi.repos.getCombinedStatusForRef({
                 owner: 'RadonApp',
-                repo: module.name,
+                repo: `radon-extension-${module.key}`,
                 ref
             }).then(({data: {sha, statuses}}) => {
                 // Ensure status `sha` matches the provided `sha`
@@ -105,6 +108,11 @@ function getTravisStatus(log, module, ref, options) {
 
                 // Resolve with travis status
                 resolve(travis);
+            }, (err) => {
+                log.warn(Chalk.yellow(`[${module.name}] (GitHub) Unable to fetch the status of "${ref}": ${err}`));
+
+                // Reject promise with error
+                reject(err);
             });
         }
 
@@ -368,6 +376,9 @@ function pushRelease(log, browser, remotes, options) {
 
                 // Resolve version commit sha
                 return repository.revparse(`${tag}~0`).then((commit) => ({
+                    key: module.key,
+                    type: module.type,
+
                     name: module.name,
                     path: module.path,
 
