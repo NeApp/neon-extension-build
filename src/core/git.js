@@ -12,6 +12,24 @@ import Vorpal from './vorpal';
 const Logger = Vorpal.logger;
 
 export class Git {
+    clean(path, options) {
+        options = {
+            debug: false,
+
+            ...(options || {})
+        };
+
+        Logger.debug(`Cleaning repository: ${path} ${Util.inspect(options)}`);
+
+        // Create repository instance
+        let repository = SimpleGit(path).silent(!options.debug);
+
+        // Stage files (ignore line ending changes)
+        return this._stageAll(repository)
+            // Return repository status
+            .then(() => this._getStatus(repository));
+    }
+
     clone(path, repoPath, localPath, options) {
         return new Promise((resolve, reject) => {
             // Clone repository to `path`
@@ -192,6 +210,24 @@ export class Git {
                 } else {
                     resolve(null);
                 }
+            });
+        });
+    }
+
+    _stageAll(repository) {
+        return new Promise((resolve, reject) => {
+            let args = [
+                'add',
+                '--all'
+            ];
+
+            repository.raw(args, (err) => {
+                if(err) {
+                    reject(err);
+                    return;
+                }
+
+                resolve();
             });
         });
     }

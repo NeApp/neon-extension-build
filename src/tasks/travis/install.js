@@ -171,6 +171,24 @@ function pack(target, branch, module) {
         return Npm.install(localPath).then(
             Npm.createHandler(Vorpal.logger, `[RadonApp/${repository}#${branch}]`)
         ).then(() => {
+            // Clean repository
+            return Git.clean(localPath).then((status) => {
+                if(!status) {
+                    Vorpal.logger.warn(Chalk.yellow(`[RadonApp/${repository}#${branch}] Invalid repository status`));
+                }
+
+                if(status.files.length > 0) {
+                    Vorpal.logger.warn(Chalk.yellow(`[RadonApp/${repository}#${branch}] Repository is dirty`));
+
+                    // List files
+                    for(let i = 0; i < status.files.length; i++) {
+                        Vorpal.logger.warn(Chalk.yellow(`[RadonApp/${repository}#${branch}] - ${status.files[i].path}`));
+                    }
+                }
+            }, (err) => {
+                Vorpal.logger.warn(Chalk.yellow(`[RadonApp/${repository}#${branch}] Unable to retrieve repository status`, err));
+            });
+        }).then(() => {
             Vorpal.logger.info(`[RadonApp/${repository}#${branch}] Packing module...`);
 
             // Pack module
