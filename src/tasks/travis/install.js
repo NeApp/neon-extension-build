@@ -182,11 +182,15 @@ function pack(target, branch, module) {
 
                     // List files
                     for(let i = 0; i < status.files.length; i++) {
-                        Vorpal.logger.warn(Chalk.yellow(`[RadonApp/${repository}#${branch}] - ${status.files[i].path}`));
+                        Vorpal.logger.warn(Chalk.yellow(
+                            `[RadonApp/${repository}#${branch}] - ${status.files[i].path}`
+                        ));
                     }
                 }
             }, (err) => {
-                Vorpal.logger.warn(Chalk.yellow(`[RadonApp/${repository}#${branch}] Unable to retrieve repository status`, err));
+                Vorpal.logger.warn(Chalk.yellow(
+                    `[RadonApp/${repository}#${branch}] Unable to retrieve repository status`, err
+                ));
             });
         }).then(() => {
             Vorpal.logger.info(`[RadonApp/${repository}#${branch}] Packing module...`);
