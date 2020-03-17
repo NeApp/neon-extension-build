@@ -16,7 +16,13 @@ export function create(link, target, prefixes) {
     }
 
     return new Promise((resolve, reject) => {
-        GentleFS.link(target, link, {prefixes}, (err) => {
+        GentleFS.link(target, link, {
+            prefixes,
+            log: {
+                verbose: console.log,
+                silly: console.debug
+            }
+        }, (err) => {
             if(err) {
                 reject(err);
                 return;
