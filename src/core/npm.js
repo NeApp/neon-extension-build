@@ -76,6 +76,7 @@ export function writeLines(log, lines, options = null) {
 
 export function run(cwd, cmd, options) {
     options = {
+        maxBuffer: 10 * 1024 * 1024,
         cwd,
 
         ...(options || {})
@@ -189,6 +190,7 @@ export function install(cwd, name, options) {
     }
 
     options = {
+        maxBuffer: 10 * 1024 * 1024,
         cwd,
 
         ...(options || {})
@@ -230,6 +232,7 @@ export function list(cwd, options) {
 
 export function pack(cwd, path, options) {
     options = {
+        maxBuffer: 10 * 1024 * 1024,
         cwd,
 
         ...(options || {})
