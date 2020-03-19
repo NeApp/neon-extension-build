@@ -63,7 +63,7 @@ export const InstallModules = Task.create({
         return runSequential(files, (file) => {
             return Npm.install(browser.extension.path, file).then(
                 Npm.createHandler(Vorpal.logger)
-            );
+            ).catch(() => false);
         });
     }).then(() => {
         // De-duplicate modules
