@@ -584,7 +584,6 @@ export function createConfiguration(browser, environment) {
             alias: {
                 ...getModuleAliases(browser),
 
-                'lodash': 'lodash-es',
                 'lodash-amd': 'lodash-es'
             },
 
